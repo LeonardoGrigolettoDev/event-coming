@@ -1,0 +1,10 @@
+FROM golang:1.20
+
+WORKDIR /app
+ENV GO111MODULE=on
+ENV PATH=$PATH:/go/bin
+
+RUN go install github.com/githubnemo/CompileDaemon@latest
+RUN mkdir -p /tmp
+
+ENTRYPOINT ["CompileDaemon", "-build=go build -o /tmp/app ./cmd/core", "-command=/tmp/app", "-directory=/app"]

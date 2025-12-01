@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  core:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: eventcoming_core_dev:latest
+    container_name: eventcoming_core_dev
+    working_dir: /app
+    volumes:
+      - ./:/app:delegated
+      - /go/pkg/mod:/go/pkg/mod
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/eventcoming?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      MIGRATE_ON_START: "false"
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "until pg_isready -h db -U postgres -d eventcoming; do sleep 1; done; CompileDaemon -build='go build -o /tmp/app ./cmd/core' -command='/tmp/app' -directory=/app"
