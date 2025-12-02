@@ -68,25 +68,34 @@ CREATE TABLE
         altitude float4 NOT NULL,
         updated_at timestamp
         WITH
-            TIME ZONE DEFAULT now () created_at timestamp
+            TIME ZONE DEFAULT now (),
+        created_at timestamp
         WITH
             TIME ZONE DEFAULT now ()
     );
 
-CREATE TYPE IF NOT EXISTS event_type AS ENUM (
-    'notification',
-    'confirmation',
-    'location',
-    'checked'
-);
+DO $$ BEGIN
+    CREATE TYPE event_type AS ENUM (
+        'notification',
+        'confirmation',
+        'location',
+        'checked'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE IF NOT EXISTS event_status AS ENUM (
-    'pending',
-    'in_progress',
-    'success',
-    'skipped',
-    'error'
-);
+DO $$ BEGIN
+    CREATE TYPE event_status AS ENUM (
+        'pending',
+        'in_progress',
+        'success',
+        'skipped',
+        'error'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE
     IF NOT EXISTS events (
@@ -104,13 +113,17 @@ CREATE TABLE
             TIME ZONE DEFAULT now ()
     );
 
-CREATE TYPE IF NOT EXISTS final_status AS ENUM (
-    'success',
-    'skipped',
-    'error',
-    'timeout',
-    'no_reply'
-);
+DO $$ BEGIN
+    CREATE TYPE final_status AS ENUM (
+        'success',
+        'skipped',
+        'error',
+        'timeout',
+        'no_reply'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE
     IF NOT EXISTS consolidated (
