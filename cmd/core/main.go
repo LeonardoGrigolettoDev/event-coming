@@ -9,10 +9,10 @@ import (
 
 	"io/ioutil"
 
-	"github.com/LeonardoGrigolettoDev/event-coming.git/internal/api"
-	"github.com/LeonardoGrigolettoDev/event-coming.git/internal/db"
-	"github.com/LeonardoGrigolettoDev/event-coming.git/internal/repositories"
-	"github.com/LeonardoGrigolettoDev/event-coming.git/internal/services"
+	"event-coming/internal/api"
+	"event-coming/internal/db"
+	"event-coming/internal/repositories"
+	"event-coming/internal/services"
 )
 
 func main() {
