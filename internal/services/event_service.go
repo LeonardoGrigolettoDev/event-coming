@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/LeonardoGrigolettoDev/event-coming.git/internal/models"
-	"github.com/LeonardoGrigolettoDev/event-coming.git/internal/repositories"
+	"event-coming/internal/models"
+	"event-coming/internal/repositories"
 	"github.com/google/uuid"
 )
 

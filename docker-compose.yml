@@ -1,47 +1,31 @@
 version: "3.8"
 
 services:
-  db:
-    image: postgres:15
-    container_name: eventcoming_db
+  postgres:
+    image: timescale/timescaledb-ha:pg15-latest
+    container_name: event_coming_postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: eventcoming
+      POSTGRES_DB: event_coming
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d eventcoming"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d event_coming"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 5s
-
-
-  core:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: eventcoming_core:latest
-    container_name: eventcoming_core
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/eventcoming?sslmode=disable
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
+      start_period: 10s
 
   redis:
-    image: redis:7
-    container_name: eventcoming_redis
+    image: redis:7-alpine
+    container_name: event_coming_redis
     restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -51,5 +35,52 @@ services:
       retries: 5
       start_period: 5s
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    image: event_coming_api:latest
+    container_name: event_coming_api
+    environment:
+      EVENT_COMING_DATABASE_HOST: postgres
+      EVENT_COMING_DATABASE_PORT: 5432
+      EVENT_COMING_DATABASE_USER: postgres
+      EVENT_COMING_DATABASE_PASSWORD: postgres
+      EVENT_COMING_DATABASE_DATABASE: event_coming
+      EVENT_COMING_REDIS_HOST: redis
+      EVENT_COMING_REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    image: event_coming_worker:latest
+    container_name: event_coming_worker
+    environment:
+      EVENT_COMING_DATABASE_HOST: postgres
+      EVENT_COMING_DATABASE_PORT: 5432
+      EVENT_COMING_DATABASE_USER: postgres
+      EVENT_COMING_DATABASE_PASSWORD: postgres
+      EVENT_COMING_DATABASE_DATABASE: event_coming
+      EVENT_COMING_REDIS_HOST: redis
+      EVENT_COMING_REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
-  db_data:
+  postgres_data:
+  redis_data:
