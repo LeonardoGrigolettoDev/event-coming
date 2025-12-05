@@ -19,23 +19,28 @@ const (
 type SubscriptionPlan string
 
 const (
-	SubscriptionPlanFree       SubscriptionPlan = "free"
-	SubscriptionPlanBasic      SubscriptionPlan = "basic"
+	SubscriptionPlanFree         SubscriptionPlan = "free"
+	SubscriptionPlanBasic        SubscriptionPlan = "basic"
 	SubscriptionPlanProfessional SubscriptionPlan = "professional"
-	SubscriptionPlanEnterprise SubscriptionPlan = "enterprise"
+	SubscriptionPlanEnterprise   SubscriptionPlan = "enterprise"
 )
 
 // Organization represents an organization/tenant
 type Organization struct {
-	ID               uuid.UUID        `json:"id" db:"id"`
-	Name             string           `json:"name" db:"name"`
-	Type             OrganizationType `json:"type" db:"type"`
-	SubscriptionPlan SubscriptionPlan `json:"subscription_plan" db:"subscription_plan"`
-	MaxEvents        int              `json:"max_events" db:"max_events"`
-	MaxParticipants  int              `json:"max_participants" db:"max_participants"`
-	Active           bool             `json:"active" db:"active"`
-	CreatedAt        time.Time        `json:"created_at" db:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at" db:"updated_at"`
+	ID               uuid.UUID        `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name             string           `json:"name" gorm:"type:varchar(100);not null"`
+	Type             OrganizationType `json:"type" gorm:"type:varchar(50);not null"`
+	SubscriptionPlan SubscriptionPlan `json:"subscription_plan" gorm:"column:subscription_plan;type:varchar(50);not null"`
+	MaxEvents        int              `json:"max_events" gorm:"column:max_events;default:10"`
+	MaxParticipants  int              `json:"max_participants" gorm:"column:max_participants;default:100"`
+	Active           bool             `json:"active" gorm:"default:true"`
+	CreatedAt        time.Time        `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt        time.Time        `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+// TableName specifies the table name for Organization
+func (Organization) TableName() string {
+	return "organizations"
 }
 
 // CreateOrganizationInput holds data for creating an organization

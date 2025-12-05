@@ -1,38 +1,75 @@
 package postgres
 
 import (
-	"context"
 	"fmt"
+	"time"
 
 	"event-coming/internal/config"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// NewPool creates a new PostgreSQL connection pool
-func NewPool(ctx context.Context, cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
-	connString := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s pool_max_conns=%d pool_min_conns=%d",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode, cfg.MaxConns, cfg.MinConns,
+// NewGormDB creates a new GORM database connection
+func NewGormDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
+	dsn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode,
 	)
 
-	poolConfig, err := pgxpool.ParseConfig(connString)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse connection string: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	poolConfig.MaxConnLifetime = cfg.MaxConnLifetime
-	poolConfig.MaxConnIdleTime = cfg.MaxConnIdleTime
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	// Get underlying sql.DB to configure connection pool
+	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create connection pool: %w", err)
+		return nil, fmt.Errorf("failed to get underlying db: %w", err)
 	}
+
+	// Configure connection pool
+	sqlDB.SetMaxOpenConns(int(cfg.MaxConns))
+	sqlDB.SetMaxIdleConns(int(cfg.MinConns))
+	sqlDB.SetConnMaxLifetime(cfg.MaxConnLifetime)
+	sqlDB.SetConnMaxIdleTime(cfg.MaxConnIdleTime)
 
 	// Test connection
-	if err := pool.Ping(ctx); err != nil {
+	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return pool, nil
+	return db, nil
+}
+
+// NewGormDBFromDSN creates a new GORM database connection from a DSN string
+func NewGormDBFromDSN(dsn string) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// Get underlying sql.DB to configure connection pool
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying db: %w", err)
+	}
+
+	// Default pool configuration
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+
+	// Test connection
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	return db, nil
 }

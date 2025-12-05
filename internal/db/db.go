@@ -1,41 +1,49 @@
 package db
 
 import (
-	"context"
-	"fmt"
 	"os"
-	"strings"
+	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func Connect(ctx context.Context) (*pgxpool.Pool, error) {
+// Connect creates a new GORM database connection
+func Connect() (*gorm.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://localhost:5432/postgres?sslmode=disable"
 	}
-	cfg, err := pgxpool.ParseConfig(dsn)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, err
 	}
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+
+	// Get underlying sql.DB to configure connection pool
+	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, err
 	}
-	return pool, nil
+
+	// Configure connection pool
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+
+	// Test connection
+	if err := sqlDB.Ping(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
-func RunMigration(ctx context.Context, pool *pgxpool.Pool, sql string) error {
-	// split into statements and execute one by one for clearer errors
-	parts := strings.Split(sql, ";")
-	for _, p := range parts {
-		s := strings.TrimSpace(p)
-		if s == "" {
-			continue
-		}
-		if _, err := pool.Exec(ctx, s); err != nil {
-			return fmt.Errorf("migration failed: %w; statement: %.200s", err, s)
-		}
-	}
-	return nil
+// RunMigration executes SQL migration statements using GORM
+func RunMigration(db *gorm.DB, sql string) error {
+	return db.Exec(sql).Error
 }

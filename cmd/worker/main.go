@@ -31,17 +31,18 @@ func main() {
 		logger.Fatal("failed to load configuration", zap.Error(err))
 	}
 
-	// Create context with timeout for initialization
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// Create context for graceful shutdown
+	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Connect to PostgreSQL
 	logger.Info("Connecting to PostgreSQL")
-	db, err := postgres.NewPool(ctx, &cfg.Database)
+	db, err := postgres.NewGormDB(&cfg.Database)
 	if err != nil {
 		logger.Fatal("failed to connect to PostgreSQL", zap.Error(err))
 	}
-	defer db.Close()
+	sqlDB, _ := db.DB()
+	defer sqlDB.Close()
 	logger.Info("Connected to PostgreSQL")
 
 	// Connect to Redis
@@ -90,7 +91,7 @@ func main() {
 	// schedulerWorker.Stop(shutdownCtx)
 	// locationFlusher.Stop(shutdownCtx)
 	// recurrenceWorker.Stop(shutdownCtx)
-	
+
 	// Use context for potential cleanup
 	_ = shutdownCtx
 
