@@ -85,39 +85,16 @@ type SchedulerRepository interface {
 // RefreshTokenRepository defines refresh token data access methods
 type RefreshTokenRepository interface {
 	Create(ctx context.Context, token *domain.RefreshToken) error
-	GetByToken(ctx context.Context, token string) (*domain.RefreshToken, error)
-	Revoke(ctx context.Context, token string) error
-	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
+	GetByToken(ctx context.Context, tokenHash string) (*domain.RefreshToken, error)
+
+	// Revogar por ID (interno, após refresh)
+	Revoke(ctx context.Context, id uuid.UUID) error
+
+	// Revogar por hash do token (logout)
+	RevokeByToken(ctx context.Context, tokenHash string) error
+
+	// Revogar todos do usuário (reset password, segurança)
+	RevokeAllByUserID(ctx context.Context, userID uuid.UUID) error
+
 	DeleteExpired(ctx context.Context) error
-}
-
-type RefreshToken struct {
-	ID        string
-	UserID    string
-	TokenHash string // hash do token, nunca o token em si
-	ExpiresAt time.Time
-	CreatedAt time.Time
-	RevokedAt *time.Time // nil se ainda válido
-	UserAgent string     // opcional: identificar dispositivo
-	IP        string     // opcional: identificar origem
-}
-
-type TokenRepository interface {
-	// Criar novo refresh token
-	Create(ctx context.Context, token *RefreshToken) error
-
-	// Buscar por hash do token
-	FindByHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
-
-	// Revogar token específico (logout)
-	Revoke(ctx context.Context, tokenHash string) error
-
-	// Revogar todos tokens do usuário (logout global / troca de senha)
-	RevokeAllByUserID(ctx context.Context, userID string) error
-
-	// Limpar tokens expirados (cleanup job)
-	DeleteExpired(ctx context.Context) (int64, error)
-
-	// Listar sessões ativas do usuário (opcional)
-	FindActiveByUserID(ctx context.Context, userID string) ([]*RefreshToken, error)
 }

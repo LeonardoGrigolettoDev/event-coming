@@ -64,11 +64,13 @@ type RedisConfig struct {
 
 // JWTConfig holds JWT authentication configuration
 type JWTConfig struct {
-	AccessSecret    string        `mapstructure:"access_secret"`
-	RefreshSecret   string        `mapstructure:"refresh_secret"`
-	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
-	Issuer          string        `mapstructure:"issuer"`
+	AccessSecret     string        `mapstructure:"access_secret"`
+	RefreshSecret    string        `mapstructure:"refresh_secret"`
+	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
+	Issuer           string        `mapstructure:"issuer"`
+	AccessExpiresIn  time.Duration `mapstructure:"access_expires_in"`
+	RefreshExpiresIn time.Duration `mapstructure:"refresh_expires_in"`
 }
 
 // WhatsAppConfig holds WhatsApp Cloud API configuration
@@ -144,6 +146,8 @@ func bindEnvVariables(v *viper.Viper) {
 	// JWT bindings
 	v.BindEnv("jwt.access_secret", "EVENT_COMING_JWT_ACCESS_SECRET")
 	v.BindEnv("jwt.refresh_secret", "EVENT_COMING_JWT_REFRESH_SECRET")
+	v.BindEnv("jwt.access_expires_in", "EVENT_COMING_JWT_ACCESS_EXPIRES_IN")
+	v.BindEnv("jwt.refresh_expires_in", "EVENT_COMING_JWT_REFRESH_EXPIRES_IN")
 
 	// App bindings
 	v.BindEnv("app.environment", "EVENT_COMING_APP_ENVIRONMENT")
@@ -192,6 +196,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("jwt.access_token_ttl", 15*time.Minute)
 	v.SetDefault("jwt.refresh_token_ttl", 7*24*time.Hour)
 	v.SetDefault("jwt.issuer", "event-coming")
+	v.SetDefault("jwt.access_expires_in", 15*time.Minute)
+	v.SetDefault("jwt.refresh_expires_in", 7*24*time.Hour)
 
 	// WhatsApp defaults
 	v.SetDefault("whatsapp.verify_token", "")

@@ -19,19 +19,23 @@ const (
 
 // Participant represents a participant in an event
 type Participant struct {
-	ID             uuid.UUID         `json:"id" db:"id"`
-	EventID        uuid.UUID         `json:"event_id" db:"event_id"`
-	InstanceID     *uuid.UUID        `json:"instance_id,omitempty" db:"instance_id"`
-	OrganizationID uuid.UUID         `json:"organization_id" db:"organization_id"`
-	Name           string            `json:"name" db:"name"`
-	PhoneNumber    string            `json:"phone_number" db:"phone_number"`
-	Email          *string           `json:"email,omitempty" db:"email"`
-	Status         ParticipantStatus `json:"status" db:"status"`
-	ConfirmedAt    *time.Time        `json:"confirmed_at,omitempty" db:"confirmed_at"`
-	CheckedInAt    *time.Time        `json:"checked_in_at,omitempty" db:"checked_in_at"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
-	CreatedAt      time.Time         `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at" db:"updated_at"`
+	ID             uuid.UUID              `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	EventID        uuid.UUID              `json:"event_id" db:"event_id" gorm:"type:uuid;not null;index"`
+	InstanceID     *uuid.UUID             `json:"instance_id,omitempty" db:"instance_id" gorm:"type:uuid;index"`
+	OrganizationID uuid.UUID              `json:"organization_id" db:"organization_id" gorm:"type:uuid;not null;index"`
+	Name           string                 `json:"name" db:"name" gorm:"size:100;not null"`
+	PhoneNumber    string                 `json:"phone_number" db:"phone_number" gorm:"size:20;not null"`
+	Email          *string                `json:"email,omitempty" db:"email" gorm:"size:255"`
+	Status         ParticipantStatus      `json:"status" db:"status" gorm:"size:50;not null;default:'pending'"`
+	ConfirmedAt    *time.Time             `json:"confirmed_at,omitempty" db:"confirmed_at"`
+	CheckedInAt    *time.Time             `json:"checked_in_at,omitempty" db:"checked_in_at"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty" db:"metadata" gorm:"type:jsonb"`
+	CreatedAt      time.Time              `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt      time.Time              `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+}
+
+func (Participant) TableName() string {
+	return "participants"
 }
 
 // CreateParticipantInput holds data for creating a participant
@@ -46,11 +50,11 @@ type CreateParticipantInput struct {
 
 // UpdateParticipantInput holds data for updating a participant
 type UpdateParticipantInput struct {
-	Name        *string                 `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
-	PhoneNumber *string                 `json:"phone_number,omitempty" validate:"omitempty,e164"`
-	Email       *string                 `json:"email,omitempty" validate:"omitempty,email"`
-	Status      *ParticipantStatus      `json:"status,omitempty" validate:"omitempty,oneof=pending confirmed denied checked_in no_show"`
-	Metadata    map[string]interface{}  `json:"metadata,omitempty"`
+	Name        *string                `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	PhoneNumber *string                `json:"phone_number,omitempty" validate:"omitempty,e164"`
+	Email       *string                `json:"email,omitempty" validate:"omitempty,email"`
+	Status      *ParticipantStatus     `json:"status,omitempty" validate:"omitempty,oneof=pending confirmed denied checked_in no_show"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // ParticipantDistance holds participant distance information

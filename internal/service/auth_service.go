@@ -2,9 +2,27 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"time"
+
 	"event-coming/internal/config"
+	"event-coming/internal/domain"
 	"event-coming/internal/dto"
 	"event-coming/internal/repository"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// Erros do service
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrEmailAlreadyExists = errors.New("email already exists")
+	ErrInvalidToken       = errors.New("invalid or expired token")
+	ErrUserNotFound       = errors.New("user not found")
 )
 
 type AuthService interface {
@@ -13,19 +31,17 @@ type AuthService interface {
 	Refresh(ctx context.Context, req dto.RefreshRequest) (*dto.RefreshResponse, error)
 }
 
-// Struct (implementação)
 type authServiceImpl struct {
 	userRepo  repository.UserRepository
-	tokenRepo repository.RefreshTokenRepository // ← Use esta que já existe
+	tokenRepo repository.RefreshTokenRepository
 	config    *config.JWTConfig
 }
 
-// Construtor
 func NewAuthService(
 	userRepo repository.UserRepository,
-	tokenRepo repository.RefreshTokenRepository, // ← Aqui também
+	tokenRepo repository.RefreshTokenRepository,
 	config *config.JWTConfig,
-) AuthService { // ← Retorna a interface
+) AuthService {
 	return &authServiceImpl{
 		userRepo:  userRepo,
 		tokenRepo: tokenRepo,
@@ -33,15 +49,172 @@ func NewAuthService(
 	}
 }
 
-// Métodos da implementação
-func (s *authServiceImpl) Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error) {
-	return nil, nil
-}
+// ==================== REGISTER ====================
 
 func (s *authServiceImpl) Register(ctx context.Context, req dto.RegisterRequest) (*dto.RegisterResponse, error) {
-	return nil, nil
+	// 1. Verificar se email já existe
+	existingUser, _ := s.userRepo.GetByEmail(ctx, req.Email)
+	if existingUser != nil {
+		return nil, ErrEmailAlreadyExists
+	}
+
+	// 2. Hash da senha
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Criar usuário
+	user := &domain.User{
+		ID:           uuid.New(),
+		Name:         req.Name,
+		Email:        req.Email,
+		PasswordHash: string(hashedPassword),
+		Phone:        &req.Phone,
+		Active:       true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// 4. Retornar resposta (sem tokens - usuário precisa fazer login)
+	return &dto.RegisterResponse{
+		ID:    user.ID.String(),
+		Name:  user.Name,
+		Email: user.Email,
+	}, nil
 }
 
+// ==================== LOGIN ====================
+
+func (s *authServiceImpl) Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error) {
+	// 1. Buscar usuário por email
+	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	if err != nil || user == nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	// 2. Verificar senha
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	// 3. Verificar se usuário está ativo
+	if !user.Active {
+		return nil, ErrInvalidCredentials
+	}
+
+	// 4. Gerar tokens
+	accessToken, err := s.generateAccessToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.generateRefreshToken(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Atualizar último login
+	_ = s.userRepo.UpdateLastLogin(ctx, user.ID, time.Now())
+
+	return &dto.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int64(s.config.AccessExpiresIn.Seconds()),
+	}, nil
+}
+
+// ==================== REFRESH ====================
+
 func (s *authServiceImpl) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto.RefreshResponse, error) {
-	return nil, nil
+	// 1. Hash do token recebido
+	tokenHash := s.hashToken(req.RefreshToken)
+
+	// 2. Buscar token no banco
+	storedToken, err := s.tokenRepo.GetByToken(ctx, tokenHash)
+	if err != nil || storedToken == nil {
+		return nil, ErrInvalidToken
+	}
+
+	// 3. Verificar se não foi revogado
+	if storedToken.RevokedAt != nil {
+		return nil, ErrInvalidToken
+	}
+
+	// 4. Verificar se não expirou
+	if time.Now().After(storedToken.ExpiresAt) {
+		return nil, ErrInvalidToken
+	}
+
+	// 5. Buscar usuário
+	user, err := s.userRepo.GetByID(ctx, storedToken.UserID)
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	// 6. Revogar token antigo
+	_ = s.tokenRepo.Revoke(ctx, storedToken.ID)
+
+	// 7. Gerar novos tokens
+	accessToken, err := s.generateAccessToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	newRefreshToken, err := s.generateRefreshToken(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.RefreshResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		ExpiresIn:    int64(s.config.AccessExpiresIn.Seconds()),
+	}, nil
+}
+
+// ==================== HELPERS ====================
+
+func (s *authServiceImpl) generateAccessToken(user *domain.User) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":   user.ID.String(),
+		"email": user.Email,
+		"name":  user.Name,
+		"exp":   time.Now().Add(s.config.AccessExpiresIn).Unix(),
+		"iat":   time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(s.config.AccessSecret))
+}
+
+func (s *authServiceImpl) generateRefreshToken(ctx context.Context, user *domain.User) (string, error) {
+	// 1. Gerar token aleatório
+	rawToken := uuid.New().String()
+	tokenHash := s.hashToken(rawToken)
+
+	// 2. Salvar no banco
+	refreshToken := &domain.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     tokenHash, // Salvamos o hash, não o token
+		ExpiresAt: time.Now().Add(s.config.RefreshExpiresIn),
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.tokenRepo.Create(ctx, refreshToken); err != nil {
+		return "", err
+	}
+
+	// 3. Retornar token raw (não o hash)
+	return rawToken, nil
+}
+
+func (s *authServiceImpl) hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }

@@ -4,8 +4,11 @@ import (
 	"context"
 	"event-coming/internal/cache"
 	"event-coming/internal/config"
+	"event-coming/internal/domain"
+	"event-coming/internal/handler"
 	"event-coming/internal/repository/postgres"
 	"event-coming/internal/router"
+	"event-coming/internal/service"
 	"fmt"
 	"net/http"
 	"os"
@@ -46,6 +49,14 @@ func main() {
 	defer sqlDB.Close()
 	logger.Info("Connected to PostgreSQL")
 
+	// AutoMigrate database schemas
+	db.AutoMigrate(
+		&domain.User{},
+		&domain.RefreshToken{},
+		&domain.Organization{},
+		// ... outras entidades
+	)
+
 	// Connect to Redis
 	logger.Info("Connecting to Redis")
 	redisClient, err := cache.NewRedisClient(&cfg.Redis)
@@ -59,15 +70,22 @@ func main() {
 	// Note: Add repository initialization here when implementing handlers
 	// Example:
 	// orgRepo := postgres.NewOrganizationRepository(db)
+	userRepo := postgres.NewUserRepository(db)
+	tokenRepo := postgres.NewRefreshTokenRepository(db)
 
 	// Initialize services
 	// Note: Add service initialization here when implementing handlers
-
+	authService := service.NewAuthService(
+		userRepo,
+		tokenRepo,
+		&cfg.JWT,
+	)
 	// Initialize handlers
 	// Note: Add handler initialization here when implementing handlers
+	authHandler := handler.NewAuthHandler(authService)
 
 	// Setup router
-	r := router.NewRouter(cfg, logger)
+	r := router.NewRouter(cfg, logger, authHandler)
 	engine := r.Setup()
 
 	// Create HTTP server

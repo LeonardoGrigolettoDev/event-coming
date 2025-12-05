@@ -2,6 +2,7 @@ package router
 
 import (
 	"event-coming/internal/config"
+	"event-coming/internal/handler"
 	"event-coming/internal/handler/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -10,13 +11,14 @@ import (
 
 // Router holds all dependencies needed for routing
 type Router struct {
-	engine *gin.Engine
-	config *config.Config
-	logger *zap.Logger
+	engine      *gin.Engine
+	config      *config.Config
+	logger      *zap.Logger
+	authHandler *handler.AuthHandler
 }
 
 // NewRouter creates a new router
-func NewRouter(cfg *config.Config, logger *zap.Logger) *Router {
+func NewRouter(cfg *config.Config, logger *zap.Logger, authHandler *handler.AuthHandler) *Router {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -24,9 +26,10 @@ func NewRouter(cfg *config.Config, logger *zap.Logger) *Router {
 	engine := gin.New()
 
 	return &Router{
-		engine: engine,
-		config: cfg,
-		logger: logger,
+		engine:      engine,
+		config:      cfg,
+		logger:      logger,
+		authHandler: authHandler,
 	}
 }
 
@@ -52,16 +55,9 @@ func (r *Router) Setup() *gin.Engine {
 		// Public routes
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", func(c *gin.Context) {
-
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
-			auth.POST("/login", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
-			auth.POST("/refresh", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
+			auth.POST("/register", r.authHandler.Register) // ← Direto!
+			auth.POST("/login", r.authHandler.Login)
+			auth.POST("/refresh", r.authHandler.Refresh)
 			auth.POST("/forgot-password", func(c *gin.Context) {
 				c.JSON(501, gin.H{"message": "not implemented"})
 			})

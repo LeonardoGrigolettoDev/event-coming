@@ -48,6 +48,8 @@ services:
       EVENT_COMING_DATABASE_DATABASE: event_coming
       EVENT_COMING_REDIS_HOST: redis
       EVENT_COMING_REDIS_PORT: 6379
+      EVENT_COMING_JWT_ACCESS_EXPIRES_IN: 15m
+      EVENT_COMING_JWT_REFRESH_EXPIRES_IN: 168h
     depends_on:
       postgres:
         condition: service_healthy

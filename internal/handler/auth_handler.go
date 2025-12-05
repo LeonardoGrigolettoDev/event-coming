@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"net/http"
+
+	"event-coming/internal/dto"
 	"event-coming/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -20,18 +23,70 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 
 // Login processa POST /auth/login
 func (h *AuthHandler) Login(c *gin.Context) {
-	// 1. Parse do JSON → DTO
-	// 2. Validação
-	// 3. Chamar h.authService.Login(...)
-	// 4. Retornar Response
+	var req dto.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	result, err := h.authService.Login(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "invalid credentials",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // Register processa POST /auth/register
 func (h *AuthHandler) Register(c *gin.Context) {
-	// ...
+	// 1. Parse + Validação do JSON
+	var req dto.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// 2. Chamar o service
+	result, err := h.authService.Register(c.Request.Context(), req)
+	if err != nil {
+		// TODO: tratar erros específicos (email duplicado, etc.)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 3. Retornar resposta de sucesso
+	c.JSON(http.StatusCreated, result)
 }
 
 // Refresh processa POST /auth/refresh
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	// ...
+	var req dto.RefreshRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	result, err := h.authService.Refresh(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "invalid or expired token",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
