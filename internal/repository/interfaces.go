@@ -26,7 +26,7 @@ type UserRepository interface {
 	Update(ctx context.Context, user *domain.User) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID, loginTime time.Time) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	
+
 	// User-Organization methods
 	AddToOrganization(ctx context.Context, userOrg *domain.UserOrganization) error
 	RemoveFromOrganization(ctx context.Context, userID, orgID uuid.UUID) error
@@ -42,7 +42,7 @@ type EventRepository interface {
 	Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
 	List(ctx context.Context, orgID uuid.UUID, page, perPage int) ([]*domain.Event, int64, error)
 	ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.EventStatus, page, perPage int) ([]*domain.Event, int64, error)
-	
+
 	// Event instance methods
 	CreateInstance(ctx context.Context, instance *domain.EventInstance) error
 	GetInstanceByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.EventInstance, error)
@@ -89,4 +89,35 @@ type RefreshTokenRepository interface {
 	Revoke(ctx context.Context, token string) error
 	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
 	DeleteExpired(ctx context.Context) error
+}
+
+type RefreshToken struct {
+	ID        string
+	UserID    string
+	TokenHash string // hash do token, nunca o token em si
+	ExpiresAt time.Time
+	CreatedAt time.Time
+	RevokedAt *time.Time // nil se ainda válido
+	UserAgent string     // opcional: identificar dispositivo
+	IP        string     // opcional: identificar origem
+}
+
+type TokenRepository interface {
+	// Criar novo refresh token
+	Create(ctx context.Context, token *RefreshToken) error
+
+	// Buscar por hash do token
+	FindByHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
+
+	// Revogar token específico (logout)
+	Revoke(ctx context.Context, tokenHash string) error
+
+	// Revogar todos tokens do usuário (logout global / troca de senha)
+	RevokeAllByUserID(ctx context.Context, userID string) error
+
+	// Limpar tokens expirados (cleanup job)
+	DeleteExpired(ctx context.Context) (int64, error)
+
+	// Listar sessões ativas do usuário (opcional)
+	FindActiveByUserID(ctx context.Context, userID string) ([]*RefreshToken, error)
 }

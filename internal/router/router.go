@@ -53,6 +53,7 @@ func (r *Router) Setup() *gin.Engine {
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", func(c *gin.Context) {
+
 				c.JSON(501, gin.H{"message": "not implemented"})
 			})
 			auth.POST("/login", func(c *gin.Context) {
