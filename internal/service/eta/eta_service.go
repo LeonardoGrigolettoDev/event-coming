@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"event-coming/internal/config"
-	"event-coming/internal/domain"
+	// "event-coming/internal/domain"
 	"event-coming/internal/repository"
 
 	"github.com/google/uuid"
@@ -14,9 +14,9 @@ import (
 
 // ETAService provides ETA calculation with multiple strategies
 type ETAService struct {
-	locationRepo  repository.LocationRepository
-	velocityCalc  *VelocityCalculator
-	osrmEnabled   bool
+	locationRepo repository.LocationRepository
+	velocityCalc *VelocityCalculator
+	osrmEnabled  bool
 }
 
 // NewETAService creates a new ETA service
@@ -25,9 +25,9 @@ func NewETAService(
 	cfg *config.OSRMConfig,
 ) *ETAService {
 	return &ETAService{
-		locationRepo:  locationRepo,
-		velocityCalc:  NewVelocityCalculator(),
-		osrmEnabled:   cfg.Enabled,
+		locationRepo: locationRepo,
+		velocityCalc: NewVelocityCalculator(),
+		osrmEnabled:  cfg.Enabled,
 	}
 }
 

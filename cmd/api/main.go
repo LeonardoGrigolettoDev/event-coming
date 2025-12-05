@@ -2,17 +2,16 @@ package main
 
 import (
 	"context"
+	"event-coming/internal/cache"
+	"event-coming/internal/config"
+	"event-coming/internal/repository/postgres"
+	"event-coming/internal/router"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"event-coming/internal/cache"
-	"event-coming/internal/config"
-	"event-coming/internal/repository/postgres"
-	"event-coming/internal/router"
 
 	"go.uber.org/zap"
 )

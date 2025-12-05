@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -9,13 +10,13 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	App       AppConfig
-	Server    ServerConfig
-	Database  DatabaseConfig
-	Redis     RedisConfig
-	JWT       JWTConfig
-	WhatsApp  WhatsAppConfig
-	OSRM      OSRMConfig
+	App      AppConfig
+	Server   ServerConfig
+	Database DatabaseConfig
+	Redis    RedisConfig
+	JWT      JWTConfig
+	WhatsApp WhatsAppConfig
+	OSRM     OSRMConfig
 }
 
 // AppConfig holds application-level configuration
@@ -50,35 +51,35 @@ type DatabaseConfig struct {
 
 // RedisConfig holds Redis connection configuration
 type RedisConfig struct {
-	Host            string        `mapstructure:"host"`
-	Port            int           `mapstructure:"port"`
-	Password        string        `mapstructure:"password"`
-	DB              int           `mapstructure:"db"`
-	PoolSize        int           `mapstructure:"pool_size"`
-	MinIdleConns    int           `mapstructure:"min_idle_conns"`
-	MaxConnAge      time.Duration `mapstructure:"max_conn_age"`
-	PoolTimeout     time.Duration `mapstructure:"pool_timeout"`
-	IdleTimeout     time.Duration `mapstructure:"idle_timeout"`
+	Host         string        `mapstructure:"host"`
+	Port         int           `mapstructure:"port"`
+	Password     string        `mapstructure:"password"`
+	DB           int           `mapstructure:"db"`
+	PoolSize     int           `mapstructure:"pool_size"`
+	MinIdleConns int           `mapstructure:"min_idle_conns"`
+	MaxConnAge   time.Duration `mapstructure:"max_conn_age"`
+	PoolTimeout  time.Duration `mapstructure:"pool_timeout"`
+	IdleTimeout  time.Duration `mapstructure:"idle_timeout"`
 }
 
 // JWTConfig holds JWT authentication configuration
 type JWTConfig struct {
-	AccessSecret       string        `mapstructure:"access_secret"`
-	RefreshSecret      string        `mapstructure:"refresh_secret"`
-	AccessTokenTTL     time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL    time.Duration `mapstructure:"refresh_token_ttl"`
-	Issuer             string        `mapstructure:"issuer"`
+	AccessSecret    string        `mapstructure:"access_secret"`
+	RefreshSecret   string        `mapstructure:"refresh_secret"`
+	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
+	Issuer          string        `mapstructure:"issuer"`
 }
 
 // WhatsAppConfig holds WhatsApp Cloud API configuration
 type WhatsAppConfig struct {
-	VerifyToken    string `mapstructure:"verify_token"`
-	AppSecret      string `mapstructure:"app_secret"`
-	AccessToken    string `mapstructure:"access_token"`
-	PhoneNumberID  string `mapstructure:"phone_number_id"`
-	BusinessID     string `mapstructure:"business_id"`
-	APIVersion     string `mapstructure:"api_version"`
-	BaseURL        string `mapstructure:"base_url"`
+	VerifyToken   string `mapstructure:"verify_token"`
+	AppSecret     string `mapstructure:"app_secret"`
+	AccessToken   string `mapstructure:"access_token"`
+	PhoneNumberID string `mapstructure:"phone_number_id"`
+	BusinessID    string `mapstructure:"business_id"`
+	APIVersion    string `mapstructure:"api_version"`
+	BaseURL       string `mapstructure:"base_url"`
 }
 
 // OSRMConfig holds OSRM routing service configuration
@@ -95,9 +96,13 @@ func Load() (*Config, error) {
 	// Set defaults
 	setDefaults(v)
 
-	// Read from environment
-	v.AutomaticEnv()
+	// Configure environment variable reading
 	v.SetEnvPrefix("EVENT_COMING")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	// Bind environment variables explicitly for nested structs
+	bindEnvVariables(v)
 
 	// Read from .env file if exists
 	v.SetConfigName(".env")
@@ -112,6 +117,37 @@ func Load() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func bindEnvVariables(v *viper.Viper) {
+	// Database bindings
+	v.BindEnv("database.host", "EVENT_COMING_DATABASE_HOST")
+	v.BindEnv("database.port", "EVENT_COMING_DATABASE_PORT")
+	v.BindEnv("database.user", "EVENT_COMING_DATABASE_USER")
+	v.BindEnv("database.password", "EVENT_COMING_DATABASE_PASSWORD")
+	v.BindEnv("database.database", "EVENT_COMING_DATABASE_DATABASE")
+	v.BindEnv("database.ssl_mode", "EVENT_COMING_DATABASE_SSL_MODE")
+	v.BindEnv("database.max_conns", "EVENT_COMING_DATABASE_MAX_CONNS")
+	v.BindEnv("database.min_conns", "EVENT_COMING_DATABASE_MIN_CONNS")
+
+	// Redis bindings
+	v.BindEnv("redis.host", "EVENT_COMING_REDIS_HOST")
+	v.BindEnv("redis.port", "EVENT_COMING_REDIS_PORT")
+	v.BindEnv("redis.password", "EVENT_COMING_REDIS_PASSWORD")
+	v.BindEnv("redis.db", "EVENT_COMING_REDIS_DB")
+	v.BindEnv("redis.pool_size", "EVENT_COMING_REDIS_POOL_SIZE")
+
+	// Server bindings
+	v.BindEnv("server.host", "EVENT_COMING_SERVER_HOST")
+	v.BindEnv("server.port", "EVENT_COMING_SERVER_PORT")
+
+	// JWT bindings
+	v.BindEnv("jwt.access_secret", "EVENT_COMING_JWT_ACCESS_SECRET")
+	v.BindEnv("jwt.refresh_secret", "EVENT_COMING_JWT_REFRESH_SECRET")
+
+	// App bindings
+	v.BindEnv("app.environment", "EVENT_COMING_APP_ENVIRONMENT")
+	v.BindEnv("app.debug", "EVENT_COMING_APP_DEBUG")
 }
 
 func setDefaults(v *viper.Viper) {

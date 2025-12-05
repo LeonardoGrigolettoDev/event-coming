@@ -8,40 +8,38 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: event_coming
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/home/postgres/pgdata/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d event_coming"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
   redis:
     image: redis:7-alpine
     container_name: event_coming_redis
-    restart: always
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 2s
+      interval: 5s
+      timeout: 5s
       retries: 5
-      start_period: 5s
 
   api:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: api
-    image: event_coming_api:latest
+      dockerfile: Dockerfile.dev
     container_name: event_coming_api
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
     environment:
       EVENT_COMING_DATABASE_HOST: postgres
       EVENT_COMING_DATABASE_PORT: 5432
@@ -55,17 +53,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "8080:8080"
-    restart: unless-stopped
 
   worker:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: worker
-    image: event_coming_worker:latest
+      dockerfile: Dockerfile.dev
     container_name: event_coming_worker
+    command: air -c .air.worker.toml
+    volumes:
+      - .:/app
     environment:
       EVENT_COMING_DATABASE_HOST: postgres
       EVENT_COMING_DATABASE_PORT: 5432
@@ -79,7 +75,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   postgres_data:

@@ -1,10 +1,15 @@
-FROM golang:1.20
+FROM golang:1.23-alpine
 
 WORKDIR /app
-ENV GO111MODULE=on
-ENV PATH=$PATH:/go/bin
 
-RUN go install github.com/githubnemo/CompileDaemon@latest
-RUN mkdir -p /tmp
+# Install air for hot reload (use compatible version)
+RUN go install github.com/air-verse/air@v1.52.3
 
-ENTRYPOINT ["CompileDaemon", "-build=go build -buildvcs=false -o /tmp/app ./cmd/core", "-command=/tmp/app", "-directory=/app"]
+# Install dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source (will be overwritten by volume mount)
+COPY . .
+
+CMD ["air", "-c", ".air.toml"]
