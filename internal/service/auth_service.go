@@ -107,7 +107,7 @@ func (s *authServiceImpl) Register(ctx context.Context, req dto.RegisterRequest)
 			Email:            req.Entity.Email,
 			PhoneNumber:      req.Entity.PhoneNumber,
 			Document:         req.Entity.Document,
-			IsActive:         true,
+			Active:           true,
 			EntityPermission: domain.EntityPermissionAdmin, // Criador é admin
 			Metadata:         req.Entity.Metadata,
 		}

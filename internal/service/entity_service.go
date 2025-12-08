@@ -54,7 +54,7 @@ func (s *EntityService) Create(ctx context.Context, req *dto.CreateEntityRequest
 		Email:       req.Email,
 		PhoneNumber: req.PhoneNumber,
 		Document:    req.Document,
-		IsActive:    true,
+		Active:      true,
 		Metadata:    req.Metadata,
 	}
 

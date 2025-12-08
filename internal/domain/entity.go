@@ -48,12 +48,13 @@ type Entity struct {
 	Email            *string                `json:"email,omitempty" db:"email" gorm:"size:255;index"`
 	PhoneNumber      *string                `json:"phone_number,omitempty" db:"phone_number" gorm:"size:20;index"`
 	Document         *string                `json:"document,omitempty" db:"document" gorm:"size:50;index"` // CPF, CNPJ, etc.
-	IsActive         bool                   `json:"is_active" db:"is_active" gorm:"default:true"`
+	Active           bool                   `json:"active" db:"is_active" gorm:"default:true"`
 	Metadata         map[string]interface{} `json:"metadata,omitempty" db:"metadata" gorm:"type:jsonb"`
 	CreatedAt        time.Time              `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt        time.Time              `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
 	EntityPermission EntityPermission       `json:"entity_permission" db:"entity_permission" gorm:"size:50;not null;default:'Participant'"`
 	DocumentType     DocumentType           `json:"document_type" db:"document_type" gorm:"size:20"`
+	Description      *string                `json:"description,omitempty" db:"description" gorm:"size:500"`
 	// Relacionamentos
 	Parent       *Entity       `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
 	Children     []Entity      `json:"children,omitempty" gorm:"foreignKey:ParentID"`
@@ -69,7 +70,7 @@ func (Entity) TableName() string {
 // CanCreateEvents retorna true se a entidade pode criar eventos
 // Todas as entidades podem criar eventos
 func (e *Entity) CanCreateEvents() bool {
-	return e.IsActive && (e.EntityPermission == EntityPermissionAdmin || e.EntityPermission == EntityPermissionStakeholder)
+	return e.Active && (e.EntityPermission == EntityPermissionAdmin || e.EntityPermission == EntityPermissionStakeholder)
 }
 
 // CreateEntityInput holds data for creating an entity

@@ -68,7 +68,7 @@ func ToEntityResponse(e *domain.Entity) *EntityResponse {
 		Email:            e.Email,
 		PhoneNumber:      e.PhoneNumber,
 		Document:         e.Document,
-		IsActive:         e.IsActive,
+		IsActive:         e.Active,
 		EntityPermission: e.EntityPermission,
 		Metadata:         e.Metadata,
 		CreatedAt:        e.CreatedAt,
