@@ -80,15 +80,12 @@ func (r *Router) Setup() *gin.Engine {
 		// Public routes
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", r.authHandler.Register) // ← Direto!
+			auth.POST("/register", r.authHandler.Register)
 			auth.POST("/login", r.authHandler.Login)
 			auth.POST("/refresh", r.authHandler.Refresh)
-			auth.POST("/forgot-password", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
-			auth.POST("/reset-password", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
+			auth.POST("/logout", r.authHandler.Logout)
+			auth.POST("/forgot-password", r.authHandler.ForgotPassword)
+			auth.POST("/reset-password", r.authHandler.ResetPassword)
 		}
 
 		// WhatsApp webhook (public - called by WhatsApp servers)

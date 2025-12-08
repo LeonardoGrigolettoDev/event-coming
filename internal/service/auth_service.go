@@ -29,26 +29,32 @@ type AuthService interface {
 	Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error)
 	Register(ctx context.Context, req dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Refresh(ctx context.Context, req dto.RefreshRequest) (*dto.RefreshResponse, error)
+	Logout(ctx context.Context, req dto.LogoutRequest) error
+	ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error)
+	ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error)
 }
 
 type authServiceImpl struct {
-	userRepo   repository.UserRepository
-	tokenRepo  repository.RefreshTokenRepository
-	entityRepo repository.EntityRepository
-	config     *config.JWTConfig
+	userRepo          repository.UserRepository
+	tokenRepo         repository.RefreshTokenRepository
+	passwordResetRepo repository.PasswordResetTokenRepository
+	entityRepo        repository.EntityRepository
+	config            *config.JWTConfig
 }
 
 func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.RefreshTokenRepository,
+	passwordResetRepo repository.PasswordResetTokenRepository,
 	entityRepo repository.EntityRepository,
 	config *config.JWTConfig,
 ) AuthService {
 	return &authServiceImpl{
-		userRepo:   userRepo,
-		tokenRepo:  tokenRepo,
-		entityRepo: entityRepo,
-		config:     config,
+		userRepo:          userRepo,
+		tokenRepo:         tokenRepo,
+		passwordResetRepo: passwordResetRepo,
+		entityRepo:        entityRepo,
+		config:            config,
 	}
 }
 
@@ -263,4 +269,101 @@ func (s *authServiceImpl) generateRefreshToken(ctx context.Context, user *domain
 func (s *authServiceImpl) hashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
+}
+
+// ==================== LOGOUT ====================
+
+func (s *authServiceImpl) Logout(ctx context.Context, req dto.LogoutRequest) error {
+	// Hash do token para buscar no banco
+	tokenHash := s.hashToken(req.RefreshToken)
+
+	// Revogar o refresh token
+	if err := s.tokenRepo.RevokeByToken(ctx, tokenHash); err != nil {
+		return ErrInvalidToken
+	}
+
+	return nil
+}
+
+// ==================== FORGOT PASSWORD ====================
+
+func (s *authServiceImpl) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error) {
+	// 1. Buscar usuário pelo email
+	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	if err != nil || user == nil {
+		// Retorna sucesso mesmo se usuário não existir (segurança)
+		return &dto.ForgotPasswordResponse{
+			Message: "If an account with this email exists, a password reset link has been sent.",
+		}, nil
+	}
+
+	// 2. Deletar tokens antigos do usuário
+	_ = s.passwordResetRepo.DeleteByUserID(ctx, user.ID)
+
+	// 3. Gerar novo token
+	rawToken := uuid.New().String()
+	tokenHash := s.hashToken(rawToken)
+
+	resetToken := &domain.PasswordResetToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     tokenHash,
+		ExpiresAt: time.Now().Add(1 * time.Hour), // Token válido por 1 hora
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.passwordResetRepo.Create(ctx, resetToken); err != nil {
+		return nil, err
+	}
+
+	// 4. TODO: Enviar email com o token
+	// Por enquanto, apenas logamos o token (em produção, enviar por email/WhatsApp)
+	// O token a ser enviado é: rawToken
+	// A URL seria algo como: https://app.example.com/reset-password?token=rawToken
+
+	return &dto.ForgotPasswordResponse{
+		Message: "If an account with this email exists, a password reset link has been sent.",
+	}, nil
+}
+
+// ==================== RESET PASSWORD ====================
+
+func (s *authServiceImpl) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error) {
+	// 1. Hash do token
+	tokenHash := s.hashToken(req.Token)
+
+	// 2. Buscar token no banco
+	resetToken, err := s.passwordResetRepo.GetByToken(ctx, tokenHash)
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	// 3. Buscar usuário
+	user, err := s.userRepo.GetByID(ctx, resetToken.UserID)
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	// 4. Hash da nova senha
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Atualizar senha do usuário
+	user.PasswordHash = string(hashedPassword)
+	user.UpdatedAt = time.Now()
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// 6. Marcar token como usado
+	_ = s.passwordResetRepo.MarkAsUsed(ctx, resetToken.ID)
+
+	// 7. Revogar todos os refresh tokens do usuário (força re-login)
+	_ = s.tokenRepo.RevokeAllByUserID(ctx, user.ID)
+
+	return &dto.ResetPasswordResponse{
+		Message: "Password has been reset successfully. Please login with your new password.",
+	}, nil
 }

@@ -102,3 +102,12 @@ type RefreshTokenRepository interface {
 
 	DeleteExpired(ctx context.Context) error
 }
+
+// PasswordResetTokenRepository defines password reset token data access methods
+type PasswordResetTokenRepository interface {
+	Create(ctx context.Context, token *domain.PasswordResetToken) error
+	GetByToken(ctx context.Context, tokenHash string) (*domain.PasswordResetToken, error)
+	MarkAsUsed(ctx context.Context, id uuid.UUID) error
+	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
+	DeleteExpired(ctx context.Context) error
+}

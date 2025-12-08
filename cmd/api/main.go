@@ -96,7 +96,7 @@ func main() {
 	schedulerRepo := postgres.NewSchedulerRepository(db)
 	entityRepo := postgres.NewEntityRepository(db)
 	locationRepo := postgres.NewLocationRepository(db)
-
+	passRepo := postgres.NewPasswordResetTokenRepository(db)
 	// Initialize location buffer
 	locationBuffer := cache.NewLocationBuffer(redisClient)
 
@@ -104,6 +104,7 @@ func main() {
 	authService := service.NewAuthService(
 		userRepo,
 		tokenRepo,
+		passRepo,
 		entityRepo,
 		&cfg.JWT,
 	)

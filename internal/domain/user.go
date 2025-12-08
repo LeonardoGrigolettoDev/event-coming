@@ -97,3 +97,17 @@ type JWTClaims struct {
 	EntityID *uuid.UUID `json:"entity_id,omitempty"`
 	Role     *UserRole  `json:"role,omitempty"`
 }
+
+// PasswordResetToken represents a password reset token
+type PasswordResetToken struct {
+	ID        uuid.UUID  `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID    uuid.UUID  `json:"user_id" db:"user_id" gorm:"type:uuid;not null;index"`
+	Token     string     `json:"token" db:"token" gorm:"size:64;uniqueIndex;not null"`
+	ExpiresAt time.Time  `json:"expires_at" db:"expires_at" gorm:"not null;index"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
+	UsedAt    *time.Time `json:"used_at,omitempty" db:"used_at"`
+}
+
+func (PasswordResetToken) TableName() string {
+	return "password_reset_tokens"
+}

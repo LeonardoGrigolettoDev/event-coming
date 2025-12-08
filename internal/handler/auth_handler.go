@@ -90,3 +90,77 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
+
+// Logout processa POST /auth/logout
+func (h *AuthHandler) Logout(c *gin.Context) {
+	var req dto.LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if err := h.authService.Logout(c.Request.Context(), req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid token",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logged out successfully",
+	})
+}
+
+// ForgotPassword processa POST /auth/forgot-password
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req dto.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	result, err := h.authService.ForgotPassword(c.Request.Context(), req)
+	if err != nil {
+		// Mesmo em caso de erro, retornamos sucesso genérico por segurança
+		c.JSON(http.StatusOK, gin.H{
+			"message": "If an account with this email exists, a password reset link has been sent.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// ResetPassword processa POST /auth/reset-password
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req dto.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid request",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	result, err := h.authService.ResetPassword(c.Request.Context(), req)
+	if err != nil {
+		if err == service.ErrInvalidToken {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid or expired reset token",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to reset password",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}

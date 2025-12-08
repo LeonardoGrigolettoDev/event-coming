@@ -84,3 +84,13 @@ type UserResponse struct {
 	Phone     string    `json:"phone,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+// ==================== LOGOUT ====================
+
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type LogoutResponse struct {
+	Message string `json:"message"`
+}
