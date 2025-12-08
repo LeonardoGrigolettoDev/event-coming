@@ -128,10 +128,10 @@ func (r *Router) Setup() *gin.Engine {
 				events.POST("/:id/cancel", r.eventHandler.Cancel)
 				events.POST("/:id/complete", r.eventHandler.Complete)
 
-				// Participants dentro de Events
-				events.POST("/:event_id/participants", r.participantHandler.Create)
-				events.GET("/:event_id/participants", r.participantHandler.ListByEvent)
-				events.POST("/:event_id/participants/batch", r.participantHandler.BatchCreate)
+				// Participants dentro de Events (usando :id consistente)
+				events.POST("/:id/participants", r.participantHandler.Create)
+				events.GET("/:id/participants", r.participantHandler.ListByEvent)
+				events.POST("/:id/participants/batch", r.participantHandler.BatchCreate)
 			}
 
 			// Participants
@@ -163,11 +163,8 @@ func (r *Router) Setup() *gin.Engine {
 				})
 			}
 
-			// WebSocket connections count (protected)
-			protected.GET("/events/:organization/:event/connections", r.websocketHandler.GetConnectionCount)
-
-			// Event cache (locations and confirmations from Redis)
-			cache := protected.Group("/:organization/:event")
+			// Event cache (locations and confirmations from Redis) - movido para evitar conflito
+			cache := protected.Group("/cache/:event")
 			{
 				cache.GET("", r.eventCacheHandler.GetEventCache)
 				cache.GET("/locations", r.eventCacheHandler.GetLocationsOnly)
@@ -176,7 +173,7 @@ func (r *Router) Setup() *gin.Engine {
 		}
 
 		// WebSocket endpoint (fora do protected, autenticação via query param)
-		v1.GET("/ws/:organization/:event", r.websocketHandler.HandleConnection)
+		v1.GET("/ws/:event", r.websocketHandler.HandleConnection)
 	}
 
 	return r.engine

@@ -87,15 +87,15 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 
 // GetConnectionCount retorna o número de conexões para um evento
 // GET /api/v1/events/:org/:event/connections
-func (h *WebSocketHandler) GetConnectionCount(c *gin.Context) {
-	orgID := c.Param("organization")
-	eventID := c.Param("event")
+// func (h *WebSocketHandler) GetConnectionCount(c *gin.Context) {
+// 	orgID := c.Param("organization")
+// 	eventID := c.Param("event")
 
-	count := h.hub.GetClientCount(orgID, eventID)
+// 	count := h.hub.GetClientCount(orgID, eventID)
 
-	c.JSON(http.StatusOK, gin.H{
-		"organization_id": orgID,
-		"event_id":        eventID,
-		"connections":     count,
-	})
-}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"organization_id": orgID,
+// 		"event_id":        eventID,
+// 		"connections":     count,
+// 	})
+// }

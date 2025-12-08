@@ -9,13 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// OrganizationRepository defines organization data access methods
-type OrganizationRepository interface {
-	Create(ctx context.Context, org *domain.Organization) error
-	GetByID(ctx context.Context, id uuid.UUID) (*domain.Organization, error)
-	Update(ctx context.Context, id uuid.UUID, input *domain.UpdateOrganizationInput) error
+// EntityRepository defines entity data access methods
+type EntityRepository interface {
+	Create(ctx context.Context, entity *domain.Entity) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Entity, error)
+	Update(ctx context.Context, id uuid.UUID, input *domain.UpdateEntityInput) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context, page, perPage int) ([]*domain.Organization, int64, error)
+	List(ctx context.Context, page, perPage int) ([]*domain.Entity, int64, error)
+	ListByParent(ctx context.Context, parentID uuid.UUID, page, perPage int) ([]*domain.Entity, int64, error)
+	GetByDocument(ctx context.Context, document string) (*domain.Entity, error)
 }
 
 // UserRepository defines user data access methods
@@ -27,59 +29,59 @@ type UserRepository interface {
 	UpdateLastLogin(ctx context.Context, id uuid.UUID, loginTime time.Time) error
 	Delete(ctx context.Context, id uuid.UUID) error
 
-	// User-Organization methods
-	AddToOrganization(ctx context.Context, userOrg *domain.UserOrganization) error
-	RemoveFromOrganization(ctx context.Context, userID, orgID uuid.UUID) error
-	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]*domain.UserOrganization, error)
-	GetOrganizationUsers(ctx context.Context, orgID uuid.UUID) ([]*domain.User, error)
+	// User-Entity methods
+	AddToEntity(ctx context.Context, userEntity *domain.UserEntity) error
+	RemoveFromEntity(ctx context.Context, userID, entityID uuid.UUID) error
+	GetUserEntities(ctx context.Context, userID uuid.UUID) ([]*domain.UserEntity, error)
+	GetEntityUsers(ctx context.Context, entityID uuid.UUID) ([]*domain.User, error)
 }
 
 // EventRepository defines event data access methods
 type EventRepository interface {
 	Create(ctx context.Context, event *domain.Event) error
-	GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Event, error)
-	Update(ctx context.Context, id uuid.UUID, orgID uuid.UUID, input *domain.UpdateEventInput) error
-	Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
-	List(ctx context.Context, orgID uuid.UUID, page, perPage int) ([]*domain.Event, int64, error)
-	ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.EventStatus, page, perPage int) ([]*domain.Event, int64, error)
+	GetByID(ctx context.Context, id uuid.UUID, entityID uuid.UUID) (*domain.Event, error)
+	Update(ctx context.Context, id uuid.UUID, entityID uuid.UUID, input *domain.UpdateEventInput) error
+	Delete(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error
+	List(ctx context.Context, entityID uuid.UUID, page, perPage int) ([]*domain.Event, int64, error)
+	ListByStatus(ctx context.Context, entityID uuid.UUID, status domain.EventStatus, page, perPage int) ([]*domain.Event, int64, error)
 
 	// Event instance methods
 	CreateInstance(ctx context.Context, instance *domain.EventInstance) error
-	GetInstanceByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.EventInstance, error)
-	ListInstances(ctx context.Context, eventID uuid.UUID, orgID uuid.UUID) ([]*domain.EventInstance, error)
+	GetInstanceByID(ctx context.Context, id uuid.UUID, entityID uuid.UUID) (*domain.EventInstance, error)
+	ListInstances(ctx context.Context, eventID uuid.UUID, entityID uuid.UUID) ([]*domain.EventInstance, error)
 }
 
 // ParticipantRepository defines participant data access methods
 type ParticipantRepository interface {
 	Create(ctx context.Context, participant *domain.Participant) error
-	GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Participant, error)
-	Update(ctx context.Context, id uuid.UUID, orgID uuid.UUID, input *domain.UpdateParticipantInput) error
-	Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
-	ListByEvent(ctx context.Context, eventID uuid.UUID, orgID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error)
-	ListByEventInstance(ctx context.Context, instanceID uuid.UUID, orgID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error)
-	UpdateStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, status domain.ParticipantStatus) error
-	GetByPhoneNumber(ctx context.Context, phoneNumber string, eventID uuid.UUID, orgID uuid.UUID) (*domain.Participant, error)
+	GetByID(ctx context.Context, id uuid.UUID, entityID uuid.UUID) (*domain.Participant, error)
+	Update(ctx context.Context, id uuid.UUID, entityID uuid.UUID, input *domain.UpdateParticipantInput) error
+	Delete(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error
+	ListByEvent(ctx context.Context, eventID uuid.UUID, entityID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error)
+	ListByEventInstance(ctx context.Context, instanceID uuid.UUID, entityID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, entityID uuid.UUID, status domain.ParticipantStatus) error
+	GetByPhoneNumber(ctx context.Context, phoneNumber string, eventID uuid.UUID, entityID uuid.UUID) (*domain.Participant, error)
 }
 
 // LocationRepository defines location data access methods
 type LocationRepository interface {
 	Create(ctx context.Context, location *domain.Location) error
 	BatchCreate(ctx context.Context, locations []*domain.Location) error
-	GetLatestByParticipant(ctx context.Context, participantID uuid.UUID, orgID uuid.UUID) (*domain.Location, error)
-	GetLatestByEvent(ctx context.Context, eventID uuid.UUID, orgID uuid.UUID) ([]*domain.Location, error)
-	GetHistory(ctx context.Context, participantID uuid.UUID, orgID uuid.UUID, from, to time.Time) ([]*domain.Location, error)
+	GetLatestByParticipant(ctx context.Context, participantID uuid.UUID, entityID uuid.UUID) (*domain.Location, error)
+	GetLatestByEvent(ctx context.Context, eventID uuid.UUID, entityID uuid.UUID) ([]*domain.Location, error)
+	GetHistory(ctx context.Context, participantID uuid.UUID, entityID uuid.UUID, from, to time.Time) ([]*domain.Location, error)
 }
 
 // SchedulerRepository defines scheduler data access methods
 type SchedulerRepository interface {
 	Create(ctx context.Context, scheduler *domain.Scheduler) error
-	GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Scheduler, error)
+	GetByID(ctx context.Context, id uuid.UUID, entityID uuid.UUID) (*domain.Scheduler, error)
 	Update(ctx context.Context, scheduler *domain.Scheduler) error
-	Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error
 	ListPending(ctx context.Context, before time.Time, limit int) ([]*domain.Scheduler, error)
-	MarkAsProcessed(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
-	MarkAsFailed(ctx context.Context, id uuid.UUID, orgID uuid.UUID, errorMsg string) error
-	IncrementRetries(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
+	MarkAsProcessed(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error
+	MarkAsFailed(ctx context.Context, id uuid.UUID, entityID uuid.UUID, errorMsg string) error
+	IncrementRetries(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error
 }
 
 // RefreshTokenRepository defines refresh token data access methods

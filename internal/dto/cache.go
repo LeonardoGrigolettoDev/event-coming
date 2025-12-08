@@ -39,7 +39,7 @@ type ParticipantConfirmationData struct {
 
 // EventCacheResponse representa todos os dados em cache de um evento
 type EventCacheResponse struct {
-	OrganizationID uuid.UUID                     `json:"organization_id"`
+	EntityID       uuid.UUID                     `json:"entity_id"`
 	EventID        uuid.UUID                     `json:"event_id"`
 	Locations      []ParticipantLocationData     `json:"locations"`
 	Confirmations  []ParticipantConfirmationData `json:"confirmations"`

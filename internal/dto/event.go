@@ -65,7 +65,7 @@ type UpdateEventRequest struct {
 // EventResponse representa a resposta com dados do evento
 type EventResponse struct {
 	ID                   uuid.UUID              `json:"id"`
-	OrganizationID       uuid.UUID              `json:"organization_id"`
+	EntityID             uuid.UUID              `json:"entity_id"`
 	Name                 string                 `json:"name"`
 	Description          *string                `json:"description,omitempty"`
 	Type                 domain.EventType       `json:"type"`
@@ -88,7 +88,7 @@ type EventResponse struct {
 func ToEventResponse(e *domain.Event) *EventResponse {
 	return &EventResponse{
 		ID:                   e.ID,
-		OrganizationID:       e.OrganizationID,
+		EntityID:             e.EntityID,
 		Name:                 e.Name,
 		Description:          e.Description,
 		Type:                 e.Type,

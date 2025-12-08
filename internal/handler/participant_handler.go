@@ -42,7 +42,7 @@ func (h *ParticipantHandler) Create(c *gin.Context) {
 		return
 	}
 
-	eventIDStr := c.Param("event_id")
+	eventIDStr := c.Param("id")
 	eventID, err := uuid.Parse(eventIDStr)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "bad_request", "invalid event_id")
@@ -203,7 +203,7 @@ func (h *ParticipantHandler) ListByEvent(c *gin.Context) {
 		return
 	}
 
-	eventIDStr := c.Param("event_id")
+	eventIDStr := c.Param("id")
 	eventID, err := uuid.Parse(eventIDStr)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "bad_request", "invalid event_id")
@@ -319,7 +319,7 @@ func (h *ParticipantHandler) BatchCreate(c *gin.Context) {
 		return
 	}
 
-	eventIDStr := c.Param("event_id")
+	eventIDStr := c.Param("id")
 	eventID, err := uuid.Parse(eventIDStr)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "bad_request", "invalid event_id")

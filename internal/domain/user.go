@@ -6,16 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// UserRole represents a user's role in an organization
+// UserRole represents a user's role in an entity
 type UserRole string
 
 const (
-	UserRoleSuperAdmin  UserRole = "super_admin"
-	UserRoleOrgOwner    UserRole = "org_owner"
-	UserRoleOrgAdmin    UserRole = "org_admin"
-	UserRoleOrgManager  UserRole = "org_manager"
-	UserRoleOrgOperator UserRole = "org_operator"
-	UserRoleOrgViewer   UserRole = "org_viewer"
+	UserRoleSuperAdmin    UserRole = "super_admin"
+	UserRoleEntityOwner   UserRole = "entity_owner"
+	UserRoleEntityAdmin   UserRole = "entity_admin"
+	UserRoleEntityManager UserRole = "entity_manager"
+	UserRoleEntityViewer  UserRole = "entity_viewer"
 )
 
 // User represents a user in the system
@@ -37,18 +36,22 @@ func (User) TableName() string {
 	return "users"
 }
 
-// UserOrganization represents a user's membership in an organization
-type UserOrganization struct {
-	ID             uuid.UUID `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	UserID         uuid.UUID `json:"user_id" db:"user_id" gorm:"type:uuid;not null;index"`
-	OrganizationID uuid.UUID `json:"organization_id" db:"organization_id" gorm:"type:uuid;not null;index"`
-	Role           UserRole  `json:"role" db:"role" gorm:"size:50;not null;default:'org_viewer'"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+// UserEntity represents a user's membership in an entity
+type UserEntity struct {
+	ID        uuid.UUID `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID    uuid.UUID `json:"user_id" db:"user_id" gorm:"type:uuid;not null;index"`
+	EntityID  uuid.UUID `json:"entity_id" db:"entity_id" gorm:"type:uuid;not null;index"`
+	Role      UserRole  `json:"role" db:"role" gorm:"size:50;not null;default:'entity_viewer'"`
+	CreatedAt time.Time `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+
+	// Relacionamentos
+	User   *User   `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	Entity *Entity `json:"entity,omitempty" gorm:"foreignKey:EntityID"`
 }
 
-func (UserOrganization) TableName() string {
-	return "user_organizations"
+func (UserEntity) TableName() string {
+	return "user_entities"
 }
 
 // CreateUserInput holds data for user registration
@@ -89,8 +92,8 @@ type AuthTokens struct {
 
 // JWTClaims holds JWT token claims
 type JWTClaims struct {
-	UserID         uuid.UUID  `json:"user_id"`
-	Email          string     `json:"email"`
-	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
-	Role           *UserRole  `json:"role,omitempty"`
+	UserID   uuid.UUID  `json:"user_id"`
+	Email    string     `json:"email"`
+	EntityID *uuid.UUID `json:"entity_id,omitempty"`
+	Role     *UserRole  `json:"role,omitempty"`
 }

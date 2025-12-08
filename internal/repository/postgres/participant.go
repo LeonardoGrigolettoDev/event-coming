@@ -30,11 +30,11 @@ func (r *participantRepository) Create(ctx context.Context, participant *domain.
 	return result.Error
 }
 
-func (r *participantRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Participant, error) {
+func (r *participantRepository) GetByID(ctx context.Context, id uuid.UUID, entityID uuid.UUID) (*domain.Participant, error) {
 	var participant domain.Participant
 
 	result := r.db.WithContext(ctx).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		First(&participant)
 
 	if result.Error != nil {
@@ -47,7 +47,7 @@ func (r *participantRepository) GetByID(ctx context.Context, id uuid.UUID, orgID
 	return &participant, nil
 }
 
-func (r *participantRepository) Update(ctx context.Context, id uuid.UUID, orgID uuid.UUID, input *domain.UpdateParticipantInput) error {
+func (r *participantRepository) Update(ctx context.Context, id uuid.UUID, entityID uuid.UUID, input *domain.UpdateParticipantInput) error {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -72,7 +72,7 @@ func (r *participantRepository) Update(ctx context.Context, id uuid.UUID, orgID 
 
 	result := r.db.WithContext(ctx).
 		Model(&domain.Participant{}).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		Updates(updates)
 
 	if result.Error != nil {
@@ -86,9 +86,9 @@ func (r *participantRepository) Update(ctx context.Context, id uuid.UUID, orgID 
 	return nil
 }
 
-func (r *participantRepository) Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (r *participantRepository) Delete(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error {
 	result := r.db.WithContext(ctx).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		Delete(&domain.Participant{})
 
 	if result.Error != nil {
@@ -102,7 +102,7 @@ func (r *participantRepository) Delete(ctx context.Context, id uuid.UUID, orgID 
 	return nil
 }
 
-func (r *participantRepository) ListByEvent(ctx context.Context, eventID uuid.UUID, orgID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error) {
+func (r *participantRepository) ListByEvent(ctx context.Context, eventID uuid.UUID, entityID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error) {
 	var participants []*domain.Participant
 	var total int64
 
@@ -111,14 +111,14 @@ func (r *participantRepository) ListByEvent(ctx context.Context, eventID uuid.UU
 	// Count total
 	if err := r.db.WithContext(ctx).
 		Model(&domain.Participant{}).
-		Where("event_id = ? AND organization_id = ?", eventID, orgID).
+		Where("event_id = ? AND entity_id = ?", eventID, entityID).
 		Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	// Get paginated results
 	if err := r.db.WithContext(ctx).
-		Where("event_id = ? AND organization_id = ?", eventID, orgID).
+		Where("event_id = ? AND entity_id = ?", eventID, entityID).
 		Order("name ASC").
 		Offset(offset).
 		Limit(perPage).
@@ -129,7 +129,7 @@ func (r *participantRepository) ListByEvent(ctx context.Context, eventID uuid.UU
 	return participants, total, nil
 }
 
-func (r *participantRepository) ListByEventInstance(ctx context.Context, instanceID uuid.UUID, orgID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error) {
+func (r *participantRepository) ListByEventInstance(ctx context.Context, instanceID uuid.UUID, entityID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error) {
 	var participants []*domain.Participant
 	var total int64
 
@@ -138,14 +138,14 @@ func (r *participantRepository) ListByEventInstance(ctx context.Context, instanc
 	// Count total
 	if err := r.db.WithContext(ctx).
 		Model(&domain.Participant{}).
-		Where("instance_id = ? AND organization_id = ?", instanceID, orgID).
+		Where("instance_id = ? AND entity_id = ?", instanceID, entityID).
 		Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	// Get paginated results
 	if err := r.db.WithContext(ctx).
-		Where("instance_id = ? AND organization_id = ?", instanceID, orgID).
+		Where("instance_id = ? AND entity_id = ?", instanceID, entityID).
 		Order("name ASC").
 		Offset(offset).
 		Limit(perPage).
@@ -156,7 +156,7 @@ func (r *participantRepository) ListByEventInstance(ctx context.Context, instanc
 	return participants, total, nil
 }
 
-func (r *participantRepository) UpdateStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, status domain.ParticipantStatus) error {
+func (r *participantRepository) UpdateStatus(ctx context.Context, id uuid.UUID, entityID uuid.UUID, status domain.ParticipantStatus) error {
 	updates := map[string]interface{}{
 		"status": status,
 	}
@@ -172,7 +172,7 @@ func (r *participantRepository) UpdateStatus(ctx context.Context, id uuid.UUID, 
 
 	result := r.db.WithContext(ctx).
 		Model(&domain.Participant{}).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		Updates(updates)
 
 	if result.Error != nil {
@@ -186,11 +186,11 @@ func (r *participantRepository) UpdateStatus(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
-func (r *participantRepository) GetByPhoneNumber(ctx context.Context, phoneNumber string, eventID uuid.UUID, orgID uuid.UUID) (*domain.Participant, error) {
+func (r *participantRepository) GetByPhoneNumber(ctx context.Context, phoneNumber string, eventID uuid.UUID, entityID uuid.UUID) (*domain.Participant, error) {
 	var participant domain.Participant
 
 	result := r.db.WithContext(ctx).
-		Where("phone_number = ? AND event_id = ? AND organization_id = ?", phoneNumber, eventID, orgID).
+		Where("phone_number = ? AND event_id = ? AND entity_id = ?", phoneNumber, eventID, entityID).
 		First(&participant)
 
 	if result.Error != nil {

@@ -77,43 +77,43 @@ func AuthMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 }
 
 // RequireOrgAccess checks if the user has access to the organization
-func RequireOrgAccess(requiredRole domain.UserRole) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		role, exists := c.Get("role")
-		if !exists {
-			response.Error(c, 403, "forbidden", "No role found")
-			c.Abort()
-			return
-		}
+// func RequireOrgAccess(requiredRole domain.UserRole) gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		role, exists := c.Get("role")
+// 		if !exists {
+// 			response.Error(c, 403, "forbidden", "No role found")
+// 			c.Abort()
+// 			return
+// 		}
 
-		userRole := role.(domain.UserRole)
+// 		userRole := role.(domain.UserRole)
 
-		// Super admin can access everything
-		if userRole == domain.UserRoleSuperAdmin {
-			c.Next()
-			return
-		}
+// 		// Super admin can access everything
+// 		if userRole == domain.UserRoleSuperAdmin {
+// 			c.Next()
+// 			return
+// 		}
 
-		// Check role hierarchy
-		if !hasPermission(userRole, requiredRole) {
-			response.Error(c, 403, "forbidden", "Insufficient permissions")
-			c.Abort()
-			return
-		}
+// 		// Check role hierarchy
+// 		if !hasPermission(userRole, requiredRole) {
+// 			response.Error(c, 403, "forbidden", "Insufficient permissions")
+// 			c.Abort()
+// 			return
+// 		}
 
-		c.Next()
-	}
-}
+// 		c.Next()
+// 	}
+// }
 
-func hasPermission(userRole, requiredRole domain.UserRole) bool {
-	roleHierarchy := map[domain.UserRole]int{
-		domain.UserRoleSuperAdmin:  6,
-		domain.UserRoleOrgOwner:    5,
-		domain.UserRoleOrgAdmin:    4,
-		domain.UserRoleOrgManager:  3,
-		domain.UserRoleOrgOperator: 2,
-		domain.UserRoleOrgViewer:   1,
-	}
+// func hasPermission(userRole, requiredRole domain.UserRole) bool {
+// 	roleHierarchy := map[domain.UserRole]int{
+// 		domain.UserRoleSuperAdmin:  6,
+// 		domain.UserRoleOrgOwner:    5,
+// 		domain.UserRoleOrgAdmin:    4,
+// 		domain.UserRoleOrgManager:  3,
+// 		domain.UserRoleOrgOperator: 2,
+// 		domain.UserRoleOrgViewer:   1,
+// 	}
 
-	return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
-}
+// 	return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
+// }

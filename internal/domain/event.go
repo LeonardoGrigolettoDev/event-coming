@@ -28,7 +28,7 @@ const (
 // Event represents an event
 type Event struct {
 	ID                   uuid.UUID   `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	OrganizationID       uuid.UUID   `json:"organization_id" db:"organization_id" gorm:"type:uuid;not null;index"`
+	EntityID             uuid.UUID   `json:"entity_id" db:"entity_id" gorm:"type:uuid;not null;index"` // Entidade que criou o evento
 	Name                 string      `json:"name" db:"name" gorm:"size:200;not null"`
 	Description          *string     `json:"description,omitempty" db:"description" gorm:"size:1000"`
 	Type                 EventType   `json:"type" db:"type" gorm:"size:50;not null"`
@@ -43,6 +43,9 @@ type Event struct {
 	CreatedBy            uuid.UUID   `json:"created_by" db:"created_by" gorm:"type:uuid;not null"`
 	CreatedAt            time.Time   `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt            time.Time   `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+
+	// Relacionamento
+	Entity *Entity `json:"entity,omitempty" gorm:"foreignKey:EntityID"`
 }
 
 func (Event) TableName() string {
@@ -51,15 +54,15 @@ func (Event) TableName() string {
 
 // EventInstance represents a specific instance of a recurring event
 type EventInstance struct {
-	ID             uuid.UUID   `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	EventID        uuid.UUID   `json:"event_id" db:"event_id" gorm:"type:uuid;not null;index"`
-	OrganizationID uuid.UUID   `json:"organization_id" db:"organization_id" gorm:"type:uuid;not null;index"`
-	InstanceDate   time.Time   `json:"instance_date" db:"instance_date" gorm:"not null"`
-	Status         EventStatus `json:"status" db:"status" gorm:"size:50;not null;default:'scheduled'"`
-	StartTime      time.Time   `json:"start_time" db:"start_time" gorm:"not null"`
-	EndTime        *time.Time  `json:"end_time,omitempty" db:"end_time"`
-	CreatedAt      time.Time   `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt      time.Time   `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+	ID           uuid.UUID   `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	EventID      uuid.UUID   `json:"event_id" db:"event_id" gorm:"type:uuid;not null;index"`
+	EntityID     uuid.UUID   `json:"entity_id" db:"entity_id" gorm:"type:uuid;not null;index"`
+	InstanceDate time.Time   `json:"instance_date" db:"instance_date" gorm:"not null"`
+	Status       EventStatus `json:"status" db:"status" gorm:"size:50;not null;default:'scheduled'"`
+	StartTime    time.Time   `json:"start_time" db:"start_time" gorm:"not null"`
+	EndTime      *time.Time  `json:"end_time,omitempty" db:"end_time"`
+	CreatedAt    time.Time   `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time   `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
 }
 
 func (EventInstance) TableName() string {

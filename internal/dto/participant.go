@@ -39,36 +39,36 @@ type UpdateParticipantRequest struct {
 
 // ParticipantResponse representa a resposta com dados do participante
 type ParticipantResponse struct {
-	ID             uuid.UUID                `json:"id"`
-	EventID        uuid.UUID                `json:"event_id"`
-	InstanceID     *uuid.UUID               `json:"instance_id,omitempty"`
-	OrganizationID uuid.UUID                `json:"organization_id"`
-	Name           string                   `json:"name"`
-	PhoneNumber    string                   `json:"phone_number"`
-	Email          *string                  `json:"email,omitempty"`
-	Status         domain.ParticipantStatus `json:"status"`
-	ConfirmedAt    *time.Time               `json:"confirmed_at,omitempty"`
-	CheckedInAt    *time.Time               `json:"checked_in_at,omitempty"`
-	Metadata       map[string]interface{}   `json:"metadata,omitempty"`
-	CreatedAt      time.Time                `json:"created_at"`
-	UpdatedAt      time.Time                `json:"updated_at"`
+	ID          uuid.UUID                `json:"id"`
+	EventID     uuid.UUID                `json:"event_id"`
+	InstanceID  *uuid.UUID               `json:"instance_id,omitempty"`
+	EntityID    uuid.UUID                `json:"entity_id"`
+	Name        string                   `json:"name"`
+	PhoneNumber string                   `json:"phone_number"`
+	Email       *string                  `json:"email,omitempty"`
+	Status      domain.ParticipantStatus `json:"status"`
+	ConfirmedAt *time.Time               `json:"confirmed_at,omitempty"`
+	CheckedInAt *time.Time               `json:"checked_in_at,omitempty"`
+	Metadata    map[string]interface{}   `json:"metadata,omitempty"`
+	CreatedAt   time.Time                `json:"created_at"`
+	UpdatedAt   time.Time                `json:"updated_at"`
 }
 
 // ToParticipantResponse converte domain.Participant para ParticipantResponse
 func ToParticipantResponse(p *domain.Participant) *ParticipantResponse {
 	return &ParticipantResponse{
-		ID:             p.ID,
-		EventID:        p.EventID,
-		InstanceID:     p.InstanceID,
-		OrganizationID: p.OrganizationID,
-		Name:           p.Name,
-		PhoneNumber:    p.PhoneNumber,
-		Email:          p.Email,
-		Status:         p.Status,
-		ConfirmedAt:    p.ConfirmedAt,
-		CheckedInAt:    p.CheckedInAt,
-		Metadata:       p.Metadata,
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
+		ID:          p.ID,
+		EventID:     p.EventID,
+		InstanceID:  p.InstanceID,
+		EntityID:    p.EntityID,
+		Name:        p.Name,
+		PhoneNumber: p.PhoneNumber,
+		Email:       p.Email,
+		Status:      p.Status,
+		ConfirmedAt: p.ConfirmedAt,
+		CheckedInAt: p.CheckedInAt,
+		Metadata:    p.Metadata,
+		CreatedAt:   p.CreatedAt,
+		UpdatedAt:   p.UpdatedAt,
 	}
 }

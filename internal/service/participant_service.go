@@ -30,9 +30,9 @@ func NewParticipantService(
 }
 
 // Create cria um novo participante vinculado a um evento
-func (s *ParticipantService) Create(ctx context.Context, orgID, eventID uuid.UUID, req *dto.CreateParticipantRequest) (*dto.ParticipantResponse, error) {
+func (s *ParticipantService) Create(ctx context.Context, entID, eventID uuid.UUID, req *dto.CreateParticipantRequest) (*dto.ParticipantResponse, error) {
 	// Verificar se o evento existe
-	event, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+	event, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		if err == domain.ErrNotFound {
 			return nil, fmt.Errorf("event not found")
@@ -41,7 +41,7 @@ func (s *ParticipantService) Create(ctx context.Context, orgID, eventID uuid.UUI
 	}
 
 	// Verificar se já existe participante com mesmo telefone neste evento
-	existing, err := s.participantRepo.GetByPhoneNumber(ctx, req.PhoneNumber, eventID, orgID)
+	existing, err := s.participantRepo.GetByPhoneNumber(ctx, req.PhoneNumber, eventID, entID)
 	if err != nil && err != domain.ErrNotFound {
 		return nil, fmt.Errorf("failed to check existing participant: %w", err)
 	}
@@ -51,15 +51,15 @@ func (s *ParticipantService) Create(ctx context.Context, orgID, eventID uuid.UUI
 
 	// Criar participante
 	participant := &domain.Participant{
-		ID:             uuid.New(),
-		EventID:        event.ID,
-		InstanceID:     req.InstanceID,
-		OrganizationID: orgID,
-		Name:           req.Name,
-		PhoneNumber:    req.PhoneNumber,
-		Email:          req.Email,
-		Status:         domain.ParticipantStatusPending,
-		Metadata:       req.Metadata,
+		ID:          uuid.New(),
+		EventID:     event.ID,
+		InstanceID:  req.InstanceID,
+		EntityID:    entID,
+		Name:        req.Name,
+		PhoneNumber: req.PhoneNumber,
+		Email:       req.Email,
+		Status:      domain.ParticipantStatusPending,
+		Metadata:    req.Metadata,
 	}
 
 	if err := s.participantRepo.Create(ctx, participant); err != nil {
@@ -70,8 +70,8 @@ func (s *ParticipantService) Create(ctx context.Context, orgID, eventID uuid.UUI
 }
 
 // GetByID busca um participante por ID
-func (s *ParticipantService) GetByID(ctx context.Context, orgID, participantID uuid.UUID) (*dto.ParticipantResponse, error) {
-	participant, err := s.participantRepo.GetByID(ctx, participantID, orgID)
+func (s *ParticipantService) GetByID(ctx context.Context, entID, participantID uuid.UUID) (*dto.ParticipantResponse, error) {
+	participant, err := s.participantRepo.GetByID(ctx, participantID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +79,9 @@ func (s *ParticipantService) GetByID(ctx context.Context, orgID, participantID u
 }
 
 // Update atualiza um participante
-func (s *ParticipantService) Update(ctx context.Context, orgID, participantID uuid.UUID, req *dto.UpdateParticipantRequest) (*dto.ParticipantResponse, error) {
+func (s *ParticipantService) Update(ctx context.Context, entID, participantID uuid.UUID, req *dto.UpdateParticipantRequest) (*dto.ParticipantResponse, error) {
 	// Verificar se existe
-	participant, err := s.participantRepo.GetByID(ctx, participantID, orgID)
+	participant, err := s.participantRepo.GetByID(ctx, participantID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +110,12 @@ func (s *ParticipantService) Update(ctx context.Context, orgID, participantID uu
 		}
 	}
 
-	if err := s.participantRepo.Update(ctx, participantID, orgID, input); err != nil {
+	if err := s.participantRepo.Update(ctx, participantID, entID, input); err != nil {
 		return nil, fmt.Errorf("failed to update participant: %w", err)
 	}
 
 	// Buscar participante atualizado
-	updated, err := s.participantRepo.GetByID(ctx, participantID, orgID)
+	updated, err := s.participantRepo.GetByID(ctx, participantID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -124,19 +124,19 @@ func (s *ParticipantService) Update(ctx context.Context, orgID, participantID uu
 }
 
 // Delete remove um participante
-func (s *ParticipantService) Delete(ctx context.Context, orgID, participantID uuid.UUID) error {
-	return s.participantRepo.Delete(ctx, participantID, orgID)
+func (s *ParticipantService) Delete(ctx context.Context, entID, participantID uuid.UUID) error {
+	return s.participantRepo.Delete(ctx, participantID, entID)
 }
 
 // ListByEvent lista participantes de um evento
-func (s *ParticipantService) ListByEvent(ctx context.Context, orgID, eventID uuid.UUID, page, perPage int) ([]*dto.ParticipantResponse, int64, error) {
+func (s *ParticipantService) ListByEvent(ctx context.Context, entID, eventID uuid.UUID, page, perPage int) ([]*dto.ParticipantResponse, int64, error) {
 	// Verificar se o evento existe
-	_, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+	_, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	participants, total, err := s.participantRepo.ListByEvent(ctx, eventID, orgID, page, perPage)
+	participants, total, err := s.participantRepo.ListByEvent(ctx, eventID, entID, page, perPage)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list participants: %w", err)
 	}
@@ -150,30 +150,30 @@ func (s *ParticipantService) ListByEvent(ctx context.Context, orgID, eventID uui
 }
 
 // UpdateStatus atualiza apenas o status do participante
-func (s *ParticipantService) UpdateStatus(ctx context.Context, orgID, participantID uuid.UUID, status domain.ParticipantStatus) error {
-	return s.participantRepo.UpdateStatus(ctx, participantID, orgID, status)
+func (s *ParticipantService) UpdateStatus(ctx context.Context, entID, participantID uuid.UUID, status domain.ParticipantStatus) error {
+	return s.participantRepo.UpdateStatus(ctx, participantID, entID, status)
 }
 
 // ConfirmParticipant confirma a participação
-func (s *ParticipantService) ConfirmParticipant(ctx context.Context, orgID, participantID uuid.UUID) (*dto.ParticipantResponse, error) {
+func (s *ParticipantService) ConfirmParticipant(ctx context.Context, entID, participantID uuid.UUID) (*dto.ParticipantResponse, error) {
 	status := domain.ParticipantStatusConfirmed
-	return s.Update(ctx, orgID, participantID, &dto.UpdateParticipantRequest{
+	return s.Update(ctx, entID, participantID, &dto.UpdateParticipantRequest{
 		Status: &status,
 	})
 }
 
 // CheckInParticipant faz check-in do participante
-func (s *ParticipantService) CheckInParticipant(ctx context.Context, orgID, participantID uuid.UUID) (*dto.ParticipantResponse, error) {
+func (s *ParticipantService) CheckInParticipant(ctx context.Context, entID, participantID uuid.UUID) (*dto.ParticipantResponse, error) {
 	status := domain.ParticipantStatusCheckedIn
-	return s.Update(ctx, orgID, participantID, &dto.UpdateParticipantRequest{
+	return s.Update(ctx, entID, participantID, &dto.UpdateParticipantRequest{
 		Status: &status,
 	})
 }
 
 // BatchCreate cria múltiplos participantes de uma vez
-func (s *ParticipantService) BatchCreate(ctx context.Context, orgID, eventID uuid.UUID, req *dto.BatchCreateParticipantsRequest) ([]*dto.ParticipantResponse, []error) {
+func (s *ParticipantService) BatchCreate(ctx context.Context, entID, eventID uuid.UUID, req *dto.BatchCreateParticipantsRequest) ([]*dto.ParticipantResponse, []error) {
 	// Verificar se o evento existe
-	_, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+	_, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		return nil, []error{fmt.Errorf("event not found: %w", err)}
 	}
@@ -182,7 +182,7 @@ func (s *ParticipantService) BatchCreate(ctx context.Context, orgID, eventID uui
 	var errors []error
 
 	for i, pReq := range req.Participants {
-		resp, err := s.Create(ctx, orgID, eventID, &pReq)
+		resp, err := s.Create(ctx, entID, eventID, &pReq)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("participant[%d]: %w", i, err))
 			continue

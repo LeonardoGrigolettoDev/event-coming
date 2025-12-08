@@ -31,7 +31,7 @@ func (b *LocationBuffer) Push(ctx context.Context, location *domain.Location) er
 	}
 
 	// Add to list buffer
-	bufferKey := fmt.Sprintf("location:buffer:%s", location.OrganizationID)
+	bufferKey := fmt.Sprintf("location:buffer:%s", location.EntityID)
 	if err := b.client.RPush(ctx, bufferKey, data).Err(); err != nil {
 		return fmt.Errorf("failed to push to buffer: %w", err)
 	}

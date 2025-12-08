@@ -46,11 +46,11 @@ func (r *locationRepository) BatchCreate(ctx context.Context, locations []*domai
 	return result.Error
 }
 
-func (r *locationRepository) GetLatestByParticipant(ctx context.Context, participantID uuid.UUID, orgID uuid.UUID) (*domain.Location, error) {
+func (r *locationRepository) GetLatestByParticipant(ctx context.Context, participantID uuid.UUID, entityID uuid.UUID) (*domain.Location, error) {
 	var location domain.Location
 
 	result := r.db.WithContext(ctx).
-		Where("participant_id = ? AND organization_id = ?", participantID, orgID).
+		Where("participant_id = ? AND entity_id = ?", participantID, entityID).
 		Order("timestamp DESC").
 		First(&location)
 
@@ -64,18 +64,18 @@ func (r *locationRepository) GetLatestByParticipant(ctx context.Context, partici
 	return &location, nil
 }
 
-func (r *locationRepository) GetLatestByEvent(ctx context.Context, eventID uuid.UUID, orgID uuid.UUID) ([]*domain.Location, error) {
+func (r *locationRepository) GetLatestByEvent(ctx context.Context, eventID uuid.UUID, entityID uuid.UUID) ([]*domain.Location, error) {
 	var locations []*domain.Location
 
 	// Subquery to get latest location per participant
 	subQuery := r.db.WithContext(ctx).
 		Model(&domain.Location{}).
 		Select("participant_id, MAX(timestamp) as max_timestamp").
-		Where("event_id = ? AND organization_id = ?", eventID, orgID).
+		Where("event_id = ? AND entity_id = ?", eventID, entityID).
 		Group("participant_id")
 
 	result := r.db.WithContext(ctx).
-		Where("event_id = ? AND organization_id = ?", eventID, orgID).
+		Where("event_id = ? AND entity_id = ?", eventID, entityID).
 		Where("(participant_id, timestamp) IN (?)", subQuery).
 		Find(&locations)
 
@@ -86,11 +86,11 @@ func (r *locationRepository) GetLatestByEvent(ctx context.Context, eventID uuid.
 	return locations, nil
 }
 
-func (r *locationRepository) GetHistory(ctx context.Context, participantID uuid.UUID, orgID uuid.UUID, from, to time.Time) ([]*domain.Location, error) {
+func (r *locationRepository) GetHistory(ctx context.Context, participantID uuid.UUID, entityID uuid.UUID, from, to time.Time) ([]*domain.Location, error) {
 	var locations []*domain.Location
 
 	result := r.db.WithContext(ctx).
-		Where("participant_id = ? AND organization_id = ?", participantID, orgID).
+		Where("participant_id = ? AND entity_id = ?", participantID, entityID).
 		Where("timestamp >= ? AND timestamp <= ?", from, to).
 		Order("timestamp ASC").
 		Find(&locations)

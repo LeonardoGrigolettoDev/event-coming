@@ -53,16 +53,16 @@ func NewSchedulerService(
 // Create cria um novo agendamento
 func (s *schedulerServiceImpl) Create(ctx context.Context, input *domain.CreateSchedulerInput, orgID uuid.UUID) (*domain.Scheduler, error) {
 	scheduler := &domain.Scheduler{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
-		EventID:        input.EventID,
-		InstanceID:     input.InstanceID,
-		Action:         input.Action,
-		Status:         domain.SchedulerStatusPending,
-		ScheduledAt:    input.ScheduledAt,
-		Retries:        0,
-		MaxRetries:     input.MaxRetries,
-		Metadata:       input.Metadata,
+		ID:          uuid.New(),
+		EntityID:    orgID,
+		EventID:     input.EventID,
+		InstanceID:  input.InstanceID,
+		Action:      input.Action,
+		Status:      domain.SchedulerStatusPending,
+		ScheduledAt: input.ScheduledAt,
+		Retries:     0,
+		MaxRetries:  input.MaxRetries,
+		Metadata:    input.Metadata,
 	}
 
 	if scheduler.MaxRetries == 0 {
@@ -126,17 +126,17 @@ func (s *schedulerServiceImpl) ProcessPendingTasks(ctx context.Context, limit in
 			)
 
 			// Incrementar retries
-			_ = s.schedulerRepo.IncrementRetries(ctx, task.ID, task.OrganizationID)
+			_ = s.schedulerRepo.IncrementRetries(ctx, task.ID, task.EntityID)
 
 			// Se excedeu max retries, marcar como falha
 			if task.Retries+1 >= task.MaxRetries {
-				_ = s.schedulerRepo.MarkAsFailed(ctx, task.ID, task.OrganizationID, err.Error())
+				_ = s.schedulerRepo.MarkAsFailed(ctx, task.ID, task.EntityID, err.Error())
 			}
 			continue
 		}
 
 		// Marcar como processado
-		if err := s.schedulerRepo.MarkAsProcessed(ctx, task.ID, task.OrganizationID); err != nil {
+		if err := s.schedulerRepo.MarkAsProcessed(ctx, task.ID, task.EntityID); err != nil {
 			s.logger.Error("Failed to mark task as processed",
 				zap.String("task_id", task.ID.String()),
 				zap.Error(err),
@@ -179,13 +179,13 @@ func (s *schedulerServiceImpl) processTask(ctx context.Context, task *domain.Sch
 // processConfirmation envia pedido de confirmação para participantes
 func (s *schedulerServiceImpl) processConfirmation(ctx context.Context, task *domain.Scheduler) error {
 	// Buscar evento
-	event, err := s.eventRepo.GetByID(ctx, task.EventID, task.OrganizationID)
+	event, err := s.eventRepo.GetByID(ctx, task.EventID, task.EntityID)
 	if err != nil {
 		return err
 	}
 
 	// Buscar participantes pendentes
-	participants, _, err := s.participantRepo.ListByEvent(ctx, task.EventID, task.OrganizationID, 1, 1000)
+	participants, _, err := s.participantRepo.ListByEvent(ctx, task.EventID, task.EntityID, 1, 1000)
 	if err != nil {
 		return err
 	}
@@ -211,13 +211,13 @@ func (s *schedulerServiceImpl) processConfirmation(ctx context.Context, task *do
 // processReminder envia lembretes para participantes confirmados
 func (s *schedulerServiceImpl) processReminder(ctx context.Context, task *domain.Scheduler) error {
 	// Buscar evento
-	event, err := s.eventRepo.GetByID(ctx, task.EventID, task.OrganizationID)
+	event, err := s.eventRepo.GetByID(ctx, task.EventID, task.EntityID)
 	if err != nil {
 		return err
 	}
 
 	// Buscar participantes confirmados
-	participants, _, err := s.participantRepo.ListByEvent(ctx, task.EventID, task.OrganizationID, 1, 1000)
+	participants, _, err := s.participantRepo.ListByEvent(ctx, task.EventID, task.EntityID, 1, 1000)
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func (s *schedulerServiceImpl) processReminder(ctx context.Context, task *domain
 // processClosure fecha o evento
 func (s *schedulerServiceImpl) processClosure(ctx context.Context, task *domain.Scheduler) error {
 	// Atualizar status do evento para completed
-	return s.eventRepo.Update(ctx, task.EventID, task.OrganizationID, &domain.UpdateEventInput{
+	return s.eventRepo.Update(ctx, task.EventID, task.EntityID, &domain.UpdateEventInput{
 		Status: func() *domain.EventStatus { s := domain.EventStatusCompleted; return &s }(),
 	})
 }
@@ -250,13 +250,13 @@ func (s *schedulerServiceImpl) processClosure(ctx context.Context, task *domain.
 // processLocationRequest solicita localização dos participantes
 func (s *schedulerServiceImpl) processLocationRequest(ctx context.Context, task *domain.Scheduler) error {
 	// Buscar evento
-	event, err := s.eventRepo.GetByID(ctx, task.EventID, task.OrganizationID)
+	event, err := s.eventRepo.GetByID(ctx, task.EventID, task.EntityID)
 	if err != nil {
 		return err
 	}
 
 	// Buscar participantes confirmados que ainda não fizeram check-in
-	participants, _, err := s.participantRepo.ListByEvent(ctx, task.EventID, task.OrganizationID, 1, 1000)
+	participants, _, err := s.participantRepo.ListByEvent(ctx, task.EventID, task.EntityID, 1, 1000)
 	if err != nil {
 		return err
 	}

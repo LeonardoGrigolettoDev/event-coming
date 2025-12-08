@@ -30,11 +30,11 @@ func (r *schedulerRepository) Create(ctx context.Context, scheduler *domain.Sche
 	return result.Error
 }
 
-func (r *schedulerRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Scheduler, error) {
+func (r *schedulerRepository) GetByID(ctx context.Context, id uuid.UUID, entityID uuid.UUID) (*domain.Scheduler, error) {
 	var scheduler domain.Scheduler
 
 	result := r.db.WithContext(ctx).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		First(&scheduler)
 
 	if result.Error != nil {
@@ -61,9 +61,9 @@ func (r *schedulerRepository) Update(ctx context.Context, scheduler *domain.Sche
 	return nil
 }
 
-func (r *schedulerRepository) Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (r *schedulerRepository) Delete(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error {
 	result := r.db.WithContext(ctx).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		Delete(&domain.Scheduler{})
 
 	if result.Error != nil {
@@ -93,12 +93,12 @@ func (r *schedulerRepository) ListPending(ctx context.Context, before time.Time,
 	return schedulers, nil
 }
 
-func (r *schedulerRepository) MarkAsProcessed(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (r *schedulerRepository) MarkAsProcessed(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error {
 	now := time.Now()
 
 	result := r.db.WithContext(ctx).
 		Model(&domain.Scheduler{}).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		Updates(map[string]interface{}{
 			"status":       domain.SchedulerStatusProcessed,
 			"processed_at": now,
@@ -115,10 +115,10 @@ func (r *schedulerRepository) MarkAsProcessed(ctx context.Context, id uuid.UUID,
 	return nil
 }
 
-func (r *schedulerRepository) MarkAsFailed(ctx context.Context, id uuid.UUID, orgID uuid.UUID, errorMsg string) error {
+func (r *schedulerRepository) MarkAsFailed(ctx context.Context, id uuid.UUID, entityID uuid.UUID, errorMsg string) error {
 	result := r.db.WithContext(ctx).
 		Model(&domain.Scheduler{}).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		Updates(map[string]interface{}{
 			"status":        domain.SchedulerStatusFailed,
 			"error_message": errorMsg,
@@ -135,10 +135,10 @@ func (r *schedulerRepository) MarkAsFailed(ctx context.Context, id uuid.UUID, or
 	return nil
 }
 
-func (r *schedulerRepository) IncrementRetries(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (r *schedulerRepository) IncrementRetries(ctx context.Context, id uuid.UUID, entityID uuid.UUID) error {
 	result := r.db.WithContext(ctx).
 		Model(&domain.Scheduler{}).
-		Where("id = ? AND organization_id = ?", id, orgID).
+		Where("id = ? AND entity_id = ?", id, entityID).
 		UpdateColumn("retries", gorm.Expr("retries + 1"))
 
 	if result.Error != nil {

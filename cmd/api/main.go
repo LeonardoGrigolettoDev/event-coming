@@ -55,11 +55,12 @@ func main() {
 		db.AutoMigrate(
 			&domain.User{},
 			&domain.RefreshToken{},
-			&domain.Organization{},
+			&domain.Entity{},
+			&domain.Entity{},
 			&domain.Participant{},
 			&domain.Event{},
 			&domain.EventInstance{},
-			&domain.UserOrganization{},
+			&domain.UserEntity{},
 			&domain.Location{},
 			&domain.Scheduler{},
 		)

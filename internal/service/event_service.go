@@ -33,11 +33,11 @@ func NewEventService(
 }
 
 // Create cria um novo evento com schedulers e participants opcionais
-func (s *EventService) Create(ctx context.Context, orgID, userID uuid.UUID, req *dto.CreateEventRequest) (*dto.EventResponse, error) {
+func (s *EventService) Create(ctx context.Context, entID, userID uuid.UUID, req *dto.CreateEventRequest) (*dto.EventResponse, error) {
 	// Criar evento
 	event := &domain.Event{
 		ID:                   uuid.New(),
-		OrganizationID:       orgID,
+		EntityID:             entID,
 		Name:                 req.Name,
 		Description:          req.Description,
 		Type:                 req.Type,
@@ -61,20 +61,20 @@ func (s *EventService) Create(ctx context.Context, orgID, userID uuid.UUID, req 
 	// Criar schedulers
 	schedulersCreated := 0
 	if req.Scheduler != nil {
-		count, err := s.createSchedulers(ctx, orgID, event, req.Scheduler)
+		count, err := s.createSchedulers(ctx, entID, event, req.Scheduler)
 		if err != nil {
 			fmt.Printf("Warning: failed to create some schedulers: %v\n", err)
 		}
 		schedulersCreated = count
 	} else {
-		count, _ := s.createDefaultSchedulers(ctx, orgID, event)
+		count, _ := s.createDefaultSchedulers(ctx, entID, event)
 		schedulersCreated = count
 	}
 	response.SchedulersCreated = schedulersCreated
 
 	// Criar participants
 	if len(req.Participants) > 0 {
-		participants, _ := s.createParticipants(ctx, orgID, event.ID, req.Participants)
+		participants, _ := s.createParticipants(ctx, entID, event.ID, req.Participants)
 		response.Participants = participants
 	}
 
@@ -82,7 +82,7 @@ func (s *EventService) Create(ctx context.Context, orgID, userID uuid.UUID, req 
 }
 
 // createSchedulers cria schedulers baseado na configuração
-func (s *EventService) createSchedulers(ctx context.Context, orgID uuid.UUID, event *domain.Event, config *dto.SchedulerConfig) (int, error) {
+func (s *EventService) createSchedulers(ctx context.Context, entID uuid.UUID, event *domain.Event, config *dto.SchedulerConfig) (int, error) {
 	var count int
 	var lastErr error
 
@@ -94,13 +94,13 @@ func (s *EventService) createSchedulers(ctx context.Context, orgID uuid.UUID, ev
 		}
 
 		scheduler := &domain.Scheduler{
-			ID:             uuid.New(),
-			OrganizationID: orgID,
-			EventID:        event.ID,
-			Action:         domain.SchedulerActionConfirmation,
-			Status:         domain.SchedulerStatusPending,
-			ScheduledAt:    scheduledAt,
-			MaxRetries:     3,
+			ID:          uuid.New(),
+			EntityID:    entID,
+			EventID:     event.ID,
+			Action:      domain.SchedulerActionConfirmation,
+			Status:      domain.SchedulerStatusPending,
+			ScheduledAt: scheduledAt,
+			MaxRetries:  3,
 			Metadata: map[string]interface{}{
 				"event_name": event.Name,
 			},
@@ -123,13 +123,13 @@ func (s *EventService) createSchedulers(ctx context.Context, orgID uuid.UUID, ev
 		}
 
 		scheduler := &domain.Scheduler{
-			ID:             uuid.New(),
-			OrganizationID: orgID,
-			EventID:        event.ID,
-			Action:         domain.SchedulerActionReminder,
-			Status:         domain.SchedulerStatusPending,
-			ScheduledAt:    scheduledAt,
-			MaxRetries:     3,
+			ID:          uuid.New(),
+			EntityID:    entID,
+			EventID:     event.ID,
+			Action:      domain.SchedulerActionReminder,
+			Status:      domain.SchedulerStatusPending,
+			ScheduledAt: scheduledAt,
+			MaxRetries:  3,
 			Metadata: map[string]interface{}{
 				"event_name": event.Name,
 			},
@@ -150,13 +150,13 @@ func (s *EventService) createSchedulers(ctx context.Context, orgID uuid.UUID, ev
 		}
 
 		scheduler := &domain.Scheduler{
-			ID:             uuid.New(),
-			OrganizationID: orgID,
-			EventID:        event.ID,
-			Action:         domain.SchedulerActionLocation,
-			Status:         domain.SchedulerStatusPending,
-			ScheduledAt:    scheduledAt,
-			MaxRetries:     3,
+			ID:          uuid.New(),
+			EntityID:    entID,
+			EventID:     event.ID,
+			Action:      domain.SchedulerActionLocation,
+			Status:      domain.SchedulerStatusPending,
+			ScheduledAt: scheduledAt,
+			MaxRetries:  3,
 			Metadata: map[string]interface{}{
 				"event_name":   event.Name,
 				"location_lat": event.LocationLat,
@@ -173,13 +173,13 @@ func (s *EventService) createSchedulers(ctx context.Context, orgID uuid.UUID, ev
 
 	// Scheduler de fechamento (sempre criar)
 	closureScheduler := &domain.Scheduler{
-		ID:             uuid.New(),
-		OrganizationID: orgID,
-		EventID:        event.ID,
-		Action:         domain.SchedulerActionClosure,
-		Status:         domain.SchedulerStatusPending,
-		ScheduledAt:    event.StartTime,
-		MaxRetries:     3,
+		ID:          uuid.New(),
+		EntityID:    entID,
+		EventID:     event.ID,
+		Action:      domain.SchedulerActionClosure,
+		Status:      domain.SchedulerStatusPending,
+		ScheduledAt: event.StartTime,
+		MaxRetries:  3,
 		Metadata: map[string]interface{}{
 			"event_name": event.Name,
 		},
@@ -198,30 +198,30 @@ func (s *EventService) createSchedulers(ctx context.Context, orgID uuid.UUID, ev
 }
 
 // createDefaultSchedulers cria schedulers padrão para um evento
-func (s *EventService) createDefaultSchedulers(ctx context.Context, orgID uuid.UUID, event *domain.Event) (int, error) {
+func (s *EventService) createDefaultSchedulers(ctx context.Context, entID uuid.UUID, event *domain.Event) (int, error) {
 	config := &dto.SchedulerConfig{
 		SendConfirmation: true,
 		SendReminder:     true,
 		TrackLocation:    true,
 	}
-	return s.createSchedulers(ctx, orgID, event, config)
+	return s.createSchedulers(ctx, entID, event, config)
 }
 
 // createParticipants cria participants para o evento
-func (s *EventService) createParticipants(ctx context.Context, orgID, eventID uuid.UUID, inputs []dto.ParticipantInput) ([]*dto.ParticipantResponse, error) {
+func (s *EventService) createParticipants(ctx context.Context, entID, eventID uuid.UUID, inputs []dto.ParticipantInput) ([]*dto.ParticipantResponse, error) {
 	var participants []*dto.ParticipantResponse
 	var lastErr error
 
 	for _, input := range inputs {
 		participant := &domain.Participant{
-			ID:             uuid.New(),
-			EventID:        eventID,
-			OrganizationID: orgID,
-			Name:           input.Name,
-			PhoneNumber:    input.PhoneNumber,
-			Email:          input.Email,
-			Status:         domain.ParticipantStatusPending,
-			Metadata:       input.Metadata,
+			ID:          uuid.New(),
+			EventID:     eventID,
+			EntityID:    entID,
+			Name:        input.Name,
+			PhoneNumber: input.PhoneNumber,
+			Email:       input.Email,
+			Status:      domain.ParticipantStatusPending,
+			Metadata:    input.Metadata,
 		}
 
 		if err := s.participantRepo.Create(ctx, participant); err != nil {
@@ -236,8 +236,8 @@ func (s *EventService) createParticipants(ctx context.Context, orgID, eventID uu
 }
 
 // GetByID busca um evento por ID
-func (s *EventService) GetByID(ctx context.Context, orgID, eventID uuid.UUID) (*dto.EventResponse, error) {
-	event, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+func (s *EventService) GetByID(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventResponse, error) {
+	event, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -245,8 +245,8 @@ func (s *EventService) GetByID(ctx context.Context, orgID, eventID uuid.UUID) (*
 }
 
 // GetByIDWithParticipants busca um evento com seus participants
-func (s *EventService) GetByIDWithParticipants(ctx context.Context, orgID, eventID uuid.UUID) (*dto.EventResponse, error) {
-	event, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+func (s *EventService) GetByIDWithParticipants(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventResponse, error) {
+	event, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (s *EventService) GetByIDWithParticipants(ctx context.Context, orgID, event
 	response := dto.ToEventResponse(event)
 
 	// Buscar participants
-	participants, _, err := s.participantRepo.ListByEvent(ctx, eventID, orgID, 1, 1000)
+	participants, _, err := s.participantRepo.ListByEvent(ctx, eventID, entID, 1, 1000)
 	if err == nil {
 		for _, p := range participants {
 			response.Participants = append(response.Participants, dto.ToParticipantResponse(p))
@@ -265,8 +265,8 @@ func (s *EventService) GetByIDWithParticipants(ctx context.Context, orgID, event
 }
 
 // Update atualiza um evento
-func (s *EventService) Update(ctx context.Context, orgID, eventID uuid.UUID, req *dto.UpdateEventRequest) (*dto.EventResponse, error) {
-	_, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+func (s *EventService) Update(ctx context.Context, entID, eventID uuid.UUID, req *dto.UpdateEventRequest) (*dto.EventResponse, error) {
+	_, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -283,11 +283,11 @@ func (s *EventService) Update(ctx context.Context, orgID, eventID uuid.UUID, req
 		ConfirmationDeadline: req.ConfirmationDeadline,
 	}
 
-	if err := s.eventRepo.Update(ctx, eventID, orgID, input); err != nil {
+	if err := s.eventRepo.Update(ctx, eventID, entID, input); err != nil {
 		return nil, fmt.Errorf("failed to update event: %w", err)
 	}
 
-	updated, err := s.eventRepo.GetByID(ctx, eventID, orgID)
+	updated, err := s.eventRepo.GetByID(ctx, eventID, entID)
 	if err != nil {
 		return nil, err
 	}
@@ -296,13 +296,13 @@ func (s *EventService) Update(ctx context.Context, orgID, eventID uuid.UUID, req
 }
 
 // Delete remove um evento
-func (s *EventService) Delete(ctx context.Context, orgID, eventID uuid.UUID) error {
-	return s.eventRepo.Delete(ctx, eventID, orgID)
+func (s *EventService) Delete(ctx context.Context, entID, eventID uuid.UUID) error {
+	return s.eventRepo.Delete(ctx, eventID, entID)
 }
 
 // List lista eventos de uma organização
-func (s *EventService) List(ctx context.Context, orgID uuid.UUID, page, perPage int) ([]*dto.EventResponse, int64, error) {
-	events, total, err := s.eventRepo.List(ctx, orgID, page, perPage)
+func (s *EventService) List(ctx context.Context, entID uuid.UUID, page, perPage int) ([]*dto.EventResponse, int64, error) {
+	events, total, err := s.eventRepo.List(ctx, entID, page, perPage)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list events: %w", err)
 	}
@@ -316,8 +316,8 @@ func (s *EventService) List(ctx context.Context, orgID uuid.UUID, page, perPage 
 }
 
 // ListByStatus lista eventos por status
-func (s *EventService) ListByStatus(ctx context.Context, orgID uuid.UUID, status domain.EventStatus, page, perPage int) ([]*dto.EventResponse, int64, error) {
-	events, total, err := s.eventRepo.ListByStatus(ctx, orgID, status, page, perPage)
+func (s *EventService) ListByStatus(ctx context.Context, entID uuid.UUID, status domain.EventStatus, page, perPage int) ([]*dto.EventResponse, int64, error) {
+	events, total, err := s.eventRepo.ListByStatus(ctx, entID, status, page, perPage)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list events: %w", err)
 	}
@@ -331,19 +331,19 @@ func (s *EventService) ListByStatus(ctx context.Context, orgID uuid.UUID, status
 }
 
 // Activate ativa um evento
-func (s *EventService) Activate(ctx context.Context, orgID, eventID uuid.UUID) (*dto.EventResponse, error) {
+func (s *EventService) Activate(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventResponse, error) {
 	status := domain.EventStatusActive
-	return s.Update(ctx, orgID, eventID, &dto.UpdateEventRequest{Status: &status})
+	return s.Update(ctx, entID, eventID, &dto.UpdateEventRequest{Status: &status})
 }
 
 // Cancel cancela um evento
-func (s *EventService) Cancel(ctx context.Context, orgID, eventID uuid.UUID) (*dto.EventResponse, error) {
+func (s *EventService) Cancel(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventResponse, error) {
 	status := domain.EventStatusCancelled
-	return s.Update(ctx, orgID, eventID, &dto.UpdateEventRequest{Status: &status})
+	return s.Update(ctx, entID, eventID, &dto.UpdateEventRequest{Status: &status})
 }
 
 // Complete marca um evento como completo
-func (s *EventService) Complete(ctx context.Context, orgID, eventID uuid.UUID) (*dto.EventResponse, error) {
+func (s *EventService) Complete(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventResponse, error) {
 	status := domain.EventStatusCompleted
-	return s.Update(ctx, orgID, eventID, &dto.UpdateEventRequest{Status: &status})
+	return s.Update(ctx, entID, eventID, &dto.UpdateEventRequest{Status: &status})
 }

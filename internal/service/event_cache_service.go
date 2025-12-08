@@ -26,17 +26,17 @@ func NewEventCacheService(redisClient *redis.Client) *EventCacheService {
 }
 
 // GetEventCacheData busca todas as informações em cache de um evento
-func (s *EventCacheService) GetEventCacheData(ctx context.Context, orgID, eventID uuid.UUID) (*dto.EventCacheResponse, error) {
+func (s *EventCacheService) GetEventCacheData(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventCacheResponse, error) {
 	data := &dto.EventCacheResponse{
-		OrganizationID: orgID,
-		EventID:        eventID,
-		Locations:      []dto.ParticipantLocationData{},
-		Confirmations:  []dto.ParticipantConfirmationData{},
-		FetchedAt:      time.Now(),
+		EntityID:      entID,
+		EventID:       eventID,
+		Locations:     []dto.ParticipantLocationData{},
+		Confirmations: []dto.ParticipantConfirmationData{},
+		FetchedAt:     time.Now(),
 	}
 
 	// Buscar localizações
-	locations, err := s.getLocations(ctx, orgID, eventID)
+	locations, err := s.getLocations(ctx, entID, eventID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get locations: %w", err)
 	}
@@ -44,7 +44,7 @@ func (s *EventCacheService) GetEventCacheData(ctx context.Context, orgID, eventI
 	data.TotalLocations = len(locations)
 
 	// Buscar confirmações
-	confirmations, err := s.getConfirmations(ctx, orgID, eventID)
+	confirmations, err := s.getConfirmations(ctx, entID, eventID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get confirmations: %w", err)
 	}
@@ -66,7 +66,7 @@ func (s *EventCacheService) GetEventCacheData(ctx context.Context, orgID, eventI
 }
 
 // getLocations busca todas as localizações de participantes de um evento
-func (s *EventCacheService) getLocations(ctx context.Context, orgID, eventID uuid.UUID) ([]dto.ParticipantLocationData, error) {
+func (s *EventCacheService) getLocations(ctx context.Context, entID, eventID uuid.UUID) ([]dto.ParticipantLocationData, error) {
 	// Pattern: location:latest:{eventID}:*
 	pattern := fmt.Sprintf("location:latest:%s:*", eventID)
 
@@ -124,9 +124,9 @@ func (s *EventCacheService) getLocations(ctx context.Context, orgID, eventID uui
 }
 
 // getConfirmations busca todas as confirmações de participantes de um evento
-func (s *EventCacheService) getConfirmations(ctx context.Context, orgID, eventID uuid.UUID) ([]dto.ParticipantConfirmationData, error) {
-	// Pattern: confirmation:{orgID}:{eventID}:*
-	pattern := fmt.Sprintf("confirmation:%s:%s:*", orgID, eventID)
+func (s *EventCacheService) getConfirmations(ctx context.Context, entID, eventID uuid.UUID) ([]dto.ParticipantConfirmationData, error) {
+	// Pattern: confirmation:{entID}:{eventID}:*
+	pattern := fmt.Sprintf("confirmation:%s:%s:*", entID, eventID)
 
 	var confirmations []dto.ParticipantConfirmationData
 	var cursor uint64
@@ -172,8 +172,8 @@ func (s *EventCacheService) getConfirmations(ctx context.Context, orgID, eventID
 }
 
 // SetConfirmation salva uma confirmação no cache
-func (s *EventCacheService) SetConfirmation(ctx context.Context, orgID, eventID uuid.UUID, participant *domain.Participant) error {
-	key := fmt.Sprintf("confirmation:%s:%s:%s", orgID, eventID, participant.ID)
+func (s *EventCacheService) SetConfirmation(ctx context.Context, entID, eventID uuid.UUID, participant *domain.Participant) error {
+	key := fmt.Sprintf("confirmation:%s:%s:%s", entID, eventID, participant.ID)
 
 	data := dto.ParticipantConfirmationData{
 		ParticipantID:   participant.ID,
@@ -199,8 +199,8 @@ func (s *EventCacheService) SetConfirmation(ctx context.Context, orgID, eventID 
 }
 
 // DeleteConfirmation remove uma confirmação do cache
-func (s *EventCacheService) DeleteConfirmation(ctx context.Context, orgID, eventID, participantID uuid.UUID) error {
-	key := fmt.Sprintf("confirmation:%s:%s:%s", orgID, eventID, participantID)
+func (s *EventCacheService) DeleteConfirmation(ctx context.Context, entID, eventID, participantID uuid.UUID) error {
+	key := fmt.Sprintf("confirmation:%s:%s:%s", entID, eventID, participantID)
 	return s.redisClient.Del(ctx, key).Err()
 }
 

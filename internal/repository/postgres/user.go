@@ -107,14 +107,14 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// ==================== USER-ORGANIZATION ====================
+// ==================== USER-ENTITY ====================
 
-func (r *userRepository) AddToOrganization(ctx context.Context, userOrg *domain.UserOrganization) error {
-	if userOrg.ID == uuid.Nil {
-		userOrg.ID = uuid.New()
+func (r *userRepository) AddToEntity(ctx context.Context, userEnt *domain.UserEntity) error {
+	if userEnt.ID == uuid.Nil {
+		userEnt.ID = uuid.New()
 	}
 
-	result := r.db.WithContext(ctx).Create(userOrg)
+	result := r.db.WithContext(ctx).Create(userEnt)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -122,9 +122,9 @@ func (r *userRepository) AddToOrganization(ctx context.Context, userOrg *domain.
 	return nil
 }
 
-func (r *userRepository) RemoveFromOrganization(ctx context.Context, userID, orgID uuid.UUID) error {
+func (r *userRepository) RemoveFromEntity(ctx context.Context, userID, entID uuid.UUID) error {
 	result := r.db.WithContext(ctx).
-		Delete(&domain.UserOrganization{}, "user_id = ? AND organization_id = ?", userID, orgID)
+		Delete(&domain.UserEntity{}, "user_id = ? AND entity_id = ?", userID, entID)
 
 	if result.Error != nil {
 		return result.Error
@@ -137,8 +137,8 @@ func (r *userRepository) RemoveFromOrganization(ctx context.Context, userID, org
 	return nil
 }
 
-func (r *userRepository) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]*domain.UserOrganization, error) {
-	var userOrgs []*domain.UserOrganization
+func (r *userRepository) GetUserEntities(ctx context.Context, userID uuid.UUID) ([]*domain.UserEntity, error) {
+	var userOrgs []*domain.UserEntity
 
 	result := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
@@ -151,12 +151,12 @@ func (r *userRepository) GetUserOrganizations(ctx context.Context, userID uuid.U
 	return userOrgs, nil
 }
 
-func (r *userRepository) GetOrganizationUsers(ctx context.Context, orgID uuid.UUID) ([]*domain.User, error) {
+func (r *userRepository) GetEntityUsers(ctx context.Context, entID uuid.UUID) ([]*domain.User, error) {
 	var users []*domain.User
 
 	result := r.db.WithContext(ctx).
-		Joins("JOIN user_organizations ON user_organizations.user_id = users.id").
-		Where("user_organizations.organization_id = ?", orgID).
+		Joins("JOIN user_entities ON user_entities.user_id = users.id").
+		Where("user_entities.entity_id = ?", entID).
 		Find(&users)
 
 	if result.Error != nil {
