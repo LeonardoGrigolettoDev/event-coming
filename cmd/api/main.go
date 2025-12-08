@@ -89,6 +89,9 @@ func main() {
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
 	tokenRepo := postgres.NewRefreshTokenRepository(db)
+	participantRepo := postgres.NewParticipantRepository(db)
+	eventRepo := postgres.NewEventRepository(db)
+	schedulerRepo := postgres.NewSchedulerRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(
@@ -96,13 +99,19 @@ func main() {
 		tokenRepo,
 		&cfg.JWT,
 	)
+	eventCacheService := service.NewEventCacheService(redisClient)
+	participantService := service.NewParticipantService(participantRepo, eventRepo)
+	eventService := service.NewEventService(eventRepo, schedulerRepo, participantRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
 	websocketHandler := handler.NewWebSocketHandler(wsHub, wsPubSub, logger)
+	eventCacheHandler := handler.NewEventCacheHandler(eventCacheService, logger)
+	participantHandler := handler.NewParticipantHandler(participantService, logger)
+	eventHandler := handler.NewEventHandler(eventService, logger)
 
 	// Setup router
-	r := router.NewRouter(cfg, logger, authHandler, websocketHandler)
+	r := router.NewRouter(cfg, logger, authHandler, websocketHandler, eventCacheHandler, participantHandler, eventHandler)
 	engine := r.Setup()
 
 	// Create HTTP server

@@ -11,11 +11,14 @@ import (
 
 // Router holds all dependencies needed for routing
 type Router struct {
-	engine           *gin.Engine
-	config           *config.Config
-	logger           *zap.Logger
-	authHandler      *handler.AuthHandler
-	websocketHandler *handler.WebSocketHandler
+	engine             *gin.Engine
+	config             *config.Config
+	logger             *zap.Logger
+	authHandler        *handler.AuthHandler
+	websocketHandler   *handler.WebSocketHandler
+	eventCacheHandler  *handler.EventCacheHandler
+	participantHandler *handler.ParticipantHandler
+	eventHandler       *handler.EventHandler
 }
 
 // NewRouter creates a new router
@@ -24,6 +27,9 @@ func NewRouter(
 	logger *zap.Logger,
 	authHandler *handler.AuthHandler,
 	websocketHandler *handler.WebSocketHandler,
+	eventCacheHandler *handler.EventCacheHandler,
+	participantHandler *handler.ParticipantHandler,
+	eventHandler *handler.EventHandler,
 ) *Router {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -32,11 +38,14 @@ func NewRouter(
 	engine := gin.New()
 
 	return &Router{
-		engine:           engine,
-		config:           cfg,
-		logger:           logger,
-		authHandler:      authHandler,
-		websocketHandler: websocketHandler,
+		engine:             engine,
+		config:             cfg,
+		logger:             logger,
+		authHandler:        authHandler,
+		websocketHandler:   websocketHandler,
+		eventCacheHandler:  eventCacheHandler,
+		participantHandler: participantHandler,
+		eventHandler:       eventHandler,
 	}
 }
 
@@ -108,43 +117,31 @@ func (r *Router) Setup() *gin.Engine {
 			// Events
 			events := protected.Group("/events")
 			{
-				events.POST("", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				events.GET("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				events.PUT("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				events.DELETE("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				events.GET("", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
+				events.POST("", r.eventHandler.Create)
+				events.GET("/:id", r.eventHandler.GetByID)
+				events.PUT("/:id", r.eventHandler.Update)
+				events.DELETE("/:id", r.eventHandler.Delete)
+				events.GET("", r.eventHandler.List)
 
-				// Participants
-				events.POST("/:id/participants", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				events.GET("/:id/participants", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
+				// Event actions
+				events.POST("/:id/activate", r.eventHandler.Activate)
+				events.POST("/:id/cancel", r.eventHandler.Cancel)
+				events.POST("/:id/complete", r.eventHandler.Complete)
+
+				// Participants dentro de Events
+				events.POST("/:event_id/participants", r.participantHandler.Create)
+				events.GET("/:event_id/participants", r.participantHandler.ListByEvent)
+				events.POST("/:event_id/participants/batch", r.participantHandler.BatchCreate)
 			}
 
 			// Participants
 			participants := protected.Group("/participants")
 			{
-				participants.GET("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				participants.PUT("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				participants.DELETE("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
+				participants.GET("/:id", r.participantHandler.GetByID)
+				participants.PUT("/:id", r.participantHandler.Update)
+				participants.DELETE("/:id", r.participantHandler.Delete)
+				participants.POST("/:id/confirm", r.participantHandler.Confirm)
+				participants.POST("/:id/check-in", r.participantHandler.CheckIn)
 
 				// Locations
 				participants.POST("/:id/locations", func(c *gin.Context) {
@@ -168,6 +165,14 @@ func (r *Router) Setup() *gin.Engine {
 
 			// WebSocket connections count (protected)
 			protected.GET("/events/:organization/:event/connections", r.websocketHandler.GetConnectionCount)
+
+			// Event cache (locations and confirmations from Redis)
+			cache := protected.Group("/:organization/:event")
+			{
+				cache.GET("", r.eventCacheHandler.GetEventCache)
+				cache.GET("/locations", r.eventCacheHandler.GetLocationsOnly)
+				cache.GET("/confirmations", r.eventCacheHandler.GetConfirmationsOnly)
+			}
 		}
 
 		// WebSocket endpoint (fora do protected, autenticação via query param)
