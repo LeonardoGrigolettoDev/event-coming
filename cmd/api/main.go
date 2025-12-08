@@ -49,13 +49,20 @@ func main() {
 	defer sqlDB.Close()
 	logger.Info("Connected to PostgreSQL")
 
-	// AutoMigrate database schemas
-	db.AutoMigrate(
-		&domain.User{},
-		&domain.RefreshToken{},
-		&domain.Organization{},
-		// ... outras entidades
-	)
+	if cfg.App.Debug {
+		logger.Info("Running AutoMigrate (dev mode)...")
+		db.AutoMigrate(
+			&domain.User{},
+			&domain.RefreshToken{},
+			&domain.Organization{},
+			&domain.Participant{},
+			&domain.Event{},
+			&domain.EventInstance{},
+			&domain.UserOrganization{},
+			&domain.Location{},
+			&domain.Scheduler{},
+		)
+	}
 
 	// Connect to Redis
 	logger.Info("Connecting to Redis")
