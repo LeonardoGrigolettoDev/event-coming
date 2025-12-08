@@ -75,13 +75,15 @@ type JWTConfig struct {
 
 // WhatsAppConfig holds WhatsApp Cloud API configuration
 type WhatsAppConfig struct {
-	VerifyToken   string `mapstructure:"verify_token"`
-	AppSecret     string `mapstructure:"app_secret"`
-	AccessToken   string `mapstructure:"access_token"`
-	PhoneNumberID string `mapstructure:"phone_number_id"`
-	BusinessID    string `mapstructure:"business_id"`
-	APIVersion    string `mapstructure:"api_version"`
-	BaseURL       string `mapstructure:"base_url"`
+	VerifyToken        string `mapstructure:"verify_token"`
+	AppSecret          string `mapstructure:"app_secret"`
+	AccessToken        string `mapstructure:"access_token"`
+	PhoneNumberID      string `mapstructure:"phone_number_id"`
+	BusinessID         string `mapstructure:"business_id"`
+	APIVersion         string `mapstructure:"api_version"`
+	BaseURL            string `mapstructure:"base_url"`
+	WebhookVerifyToken string `mapstructure:"webhook_verify_token"`
+	WebhookSecret      string `mapstructure:"webhook_secret"`
 }
 
 // OSRMConfig holds OSRM routing service configuration
@@ -207,6 +209,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("whatsapp.business_id", "")
 	v.SetDefault("whatsapp.api_version", "v18.0")
 	v.SetDefault("whatsapp.base_url", "https://graph.facebook.com")
+	v.SetDefault("whatsapp.webhook_verify_token", "event-coming-webhook-token")
+	v.SetDefault("whatsapp.webhook_secret", "")
 
 	// OSRM defaults
 	v.SetDefault("osrm.enabled", false)

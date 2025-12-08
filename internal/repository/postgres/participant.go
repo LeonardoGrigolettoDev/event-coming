@@ -202,3 +202,27 @@ func (r *participantRepository) GetByPhoneNumber(ctx context.Context, phoneNumbe
 
 	return &participant, nil
 }
+
+// GetActiveByPhoneNumber finds a participant by phone number in active events
+// Returns the most recent participant with an active event
+func (r *participantRepository) GetActiveByPhoneNumber(ctx context.Context, phoneNumber string) (*domain.Participant, error) {
+	var participant domain.Participant
+
+	// Join with events to find participants in active events
+	result := r.db.WithContext(ctx).
+		Joins("JOIN events ON events.id = participants.event_id").
+		Where("participants.phone_number = ?", phoneNumber).
+		Where("events.status = ?", domain.EventStatusActive).
+		Where("events.start_time <= ? AND events.end_time >= ?", time.Now().Add(24*time.Hour), time.Now()).
+		Order("events.start_time DESC").
+		First(&participant)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, result.Error
+	}
+
+	return &participant, nil
+}

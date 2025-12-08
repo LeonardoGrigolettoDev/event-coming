@@ -189,3 +189,8 @@ func (s *ParticipantService) BatchCreate(ctx context.Context, entID, eventID uui
 
 	return responses, errors
 }
+
+// GetByPhoneNumber busca um participante pelo número de telefone em eventos ativos
+func (s *ParticipantService) GetByPhoneNumber(ctx context.Context, phoneNumber string) (*domain.Participant, error) {
+	return s.participantRepo.GetActiveByPhoneNumber(ctx, phoneNumber)
+}

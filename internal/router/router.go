@@ -21,6 +21,7 @@ type Router struct {
 	eventHandler       *handler.EventHandler
 	entityHandler      *handler.EntityHandler
 	locationHandler    *handler.LocationHandler
+	webhookHandler     *handler.WebhookHandler
 }
 
 // NewRouter creates a new router
@@ -34,6 +35,7 @@ func NewRouter(
 	eventHandler *handler.EventHandler,
 	entityHandler *handler.EntityHandler,
 	locationHandler *handler.LocationHandler,
+	webhookHandler *handler.WebhookHandler,
 ) *Router {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -52,6 +54,7 @@ func NewRouter(
 		eventHandler:       eventHandler,
 		entityHandler:      entityHandler,
 		locationHandler:    locationHandler,
+		webhookHandler:     webhookHandler,
 	}
 }
 
@@ -88,15 +91,11 @@ func (r *Router) Setup() *gin.Engine {
 			})
 		}
 
-		// WhatsApp webhook
+		// WhatsApp webhook (public - called by WhatsApp servers)
 		webhook := v1.Group("/webhook")
 		{
-			webhook.GET("/whatsapp", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
-			webhook.POST("/whatsapp", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
+			webhook.GET("/whatsapp", r.webhookHandler.VerifyWebhook)
+			webhook.POST("/whatsapp", r.webhookHandler.HandleWebhook)
 		}
 
 		// Protected routes (require authentication)

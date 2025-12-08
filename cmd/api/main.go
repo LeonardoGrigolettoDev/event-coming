@@ -122,9 +122,10 @@ func main() {
 	eventHandler := handler.NewEventHandler(eventService, logger)
 	entityHandler := handler.NewEntityHandler(entityService, logger)
 	locationHandler := handler.NewLocationHandler(locationService, etaService, eventService)
+	webhookHandler := handler.NewWebhookHandler(&cfg.WhatsApp, participantService, locationService, logger)
 
 	// Setup router
-	r := router.NewRouter(cfg, logger, authHandler, websocketHandler, eventCacheHandler, participantHandler, eventHandler, entityHandler, locationHandler)
+	r := router.NewRouter(cfg, logger, authHandler, websocketHandler, eventCacheHandler, participantHandler, eventHandler, entityHandler, locationHandler, webhookHandler)
 	engine := r.Setup()
 
 	// Create HTTP server

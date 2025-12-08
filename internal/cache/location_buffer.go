@@ -22,8 +22,27 @@ func NewLocationBuffer(client *redis.Client) *LocationBuffer {
 	return &LocationBuffer{client: client}
 }
 
-// Push adds a location to the buffer
+// Push adds a location to the buffer (uses default 24h TTL)
 func (b *LocationBuffer) Push(ctx context.Context, location *domain.Location) error {
+	return b.PushWithTTL(ctx, location, 24*time.Hour)
+}
+
+// PushWithEventEndTime adds a location to the buffer with TTL based on event end time
+func (b *LocationBuffer) PushWithEventEndTime(ctx context.Context, location *domain.Location, eventEndTime time.Time) error {
+	// Calculate TTL based on event end time
+	ttl := time.Until(eventEndTime)
+	if ttl <= 0 {
+		// Event already ended, use minimum TTL of 1 hour for cleanup
+		ttl = 1 * time.Hour
+	}
+	// Add 1 hour buffer after event ends
+	ttl += 1 * time.Hour
+
+	return b.PushWithTTL(ctx, location, ttl)
+}
+
+// PushWithTTL adds a location to the buffer with custom TTL
+func (b *LocationBuffer) PushWithTTL(ctx context.Context, location *domain.Location, ttl time.Duration) error {
 	// Serialize location
 	data, err := json.Marshal(location)
 	if err != nil {
@@ -36,9 +55,9 @@ func (b *LocationBuffer) Push(ctx context.Context, location *domain.Location) er
 		return fmt.Errorf("failed to push to buffer: %w", err)
 	}
 
-	// Update latest location cache
+	// Update latest location cache with TTL
 	cacheKey := fmt.Sprintf("location:latest:%s:%s", location.EventID, location.ParticipantID)
-	if err := b.client.Set(ctx, cacheKey, data, 24*time.Hour).Err(); err != nil {
+	if err := b.client.Set(ctx, cacheKey, data, ttl).Err(); err != nil {
 		return fmt.Errorf("failed to cache latest location: %w", err)
 	}
 
@@ -48,6 +67,35 @@ func (b *LocationBuffer) Push(ctx context.Context, location *domain.Location) er
 		// Log error but don't fail
 		fmt.Printf("failed to publish location update: %v\n", err)
 	}
+
+	return nil
+}
+
+// SetLatestLocation sets or updates the latest location with TTL based on event end time
+func (b *LocationBuffer) SetLatestLocation(ctx context.Context, location *domain.Location, eventEndTime time.Time) error {
+	// Serialize location
+	data, err := json.Marshal(location)
+	if err != nil {
+		return fmt.Errorf("failed to marshal location: %w", err)
+	}
+
+	// Calculate TTL based on event end time
+	ttl := time.Until(eventEndTime)
+	if ttl <= 0 {
+		ttl = 1 * time.Hour
+	}
+	ttl += 1 * time.Hour // Add buffer after event ends
+
+	cacheKey := fmt.Sprintf("location:latest:%s:%s", location.EventID, location.ParticipantID)
+
+	// Use SET with TTL - this creates if not exists or updates if exists
+	if err := b.client.Set(ctx, cacheKey, data, ttl).Err(); err != nil {
+		return fmt.Errorf("failed to set latest location: %w", err)
+	}
+
+	// Also publish for real-time updates
+	channel := fmt.Sprintf("location:updates:%s", location.EventID)
+	b.client.Publish(ctx, channel, data)
 
 	return nil
 }

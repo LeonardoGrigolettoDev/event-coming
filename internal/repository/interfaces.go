@@ -61,6 +61,8 @@ type ParticipantRepository interface {
 	ListByEventInstance(ctx context.Context, instanceID uuid.UUID, entityID uuid.UUID, page, perPage int) ([]*domain.Participant, int64, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, entityID uuid.UUID, status domain.ParticipantStatus) error
 	GetByPhoneNumber(ctx context.Context, phoneNumber string, eventID uuid.UUID, entityID uuid.UUID) (*domain.Participant, error)
+	// GetActiveByPhoneNumber finds a participant by phone number in active events
+	GetActiveByPhoneNumber(ctx context.Context, phoneNumber string) (*domain.Participant, error)
 }
 
 // LocationRepository defines location data access methods
