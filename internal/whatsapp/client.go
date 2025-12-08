@@ -109,3 +109,44 @@ func (c *Client) SendLocationRequest(ctx context.Context, phoneNumber, participa
 
 	return c.SendTemplateMessage(ctx, req)
 }
+
+// SendTextMessage sends a plain text message
+func (c *Client) SendTextMessage(ctx context.Context, phoneNumber, message string) error {
+	url := fmt.Sprintf("%s/messages", c.baseURL)
+
+	payload := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                phoneNumber,
+		"type":              "text",
+		"text": map[string]interface{}{
+			"preview_url": false,
+			"body":        message,
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.AccessToken))
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}

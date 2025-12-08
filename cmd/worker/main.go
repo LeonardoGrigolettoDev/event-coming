@@ -11,6 +11,9 @@ import (
 	"event-coming/internal/cache"
 	"event-coming/internal/config"
 	"event-coming/internal/repository/postgres"
+	"event-coming/internal/service"
+	"event-coming/internal/whatsapp"
+	"event-coming/internal/worker"
 
 	"go.uber.org/zap"
 )
@@ -32,7 +35,7 @@ func main() {
 	}
 
 	// Create context for graceful shutdown
-	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Connect to PostgreSQL
@@ -55,22 +58,39 @@ func main() {
 	logger.Info("Connected to Redis")
 
 	// Initialize repositories
-	// Note: Add repository initialization here
-	// Example:
-	// schedulerRepo := postgres.NewSchedulerRepository(db)
-	// locationRepo := postgres.NewLocationRepository(db)
+	schedulerRepo := postgres.NewSchedulerRepository(db)
+	participantRepo := postgres.NewParticipantRepository(db)
+	eventRepo := postgres.NewEventRepository(db)
+
+	// Initialize WhatsApp client (pode ser nil se não configurado)
+	var whatsappClient *whatsapp.Client
+	if cfg.WhatsApp.AccessToken != "" {
+		whatsappClient = whatsapp.NewClient(&cfg.WhatsApp)
+		logger.Info("WhatsApp client initialized")
+	} else {
+		logger.Warn("WhatsApp client not configured, notifications will be skipped")
+	}
+
+	// Initialize services
+	notificationService := service.NewNotificationService(whatsappClient, logger)
+	schedulerService := service.NewSchedulerService(
+		schedulerRepo,
+		participantRepo,
+		eventRepo,
+		notificationService,
+		logger,
+	)
 
 	// Initialize workers
-	// Note: Add worker initialization and startup here
-	// Example:
-	// schedulerWorker := worker.NewSchedulerWorker(schedulerRepo, whatsappClient, logger)
-	// locationFlusher := worker.NewLocationFlusher(locationBuffer, locationRepo, logger)
-	// recurrenceWorker := worker.NewRecurrenceWorker(eventRepo, logger)
+	schedulerWorker := worker.NewSchedulerWorker(
+		schedulerService,
+		logger,
+		30*time.Second, // Intervalo de processamento
+		100,            // Batch size
+	)
 
 	// Start workers in goroutines
-	// go schedulerWorker.Start(ctx)
-	// go locationFlusher.Start(ctx)
-	// go recurrenceWorker.Start(ctx)
+	go schedulerWorker.Start(ctx)
 
 	logger.Info("All workers started")
 
@@ -81,19 +101,11 @@ func main() {
 
 	logger.Info("Shutting down workers...")
 
-	// Create shutdown context with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel()
+	// Cancel context to signal workers to stop
+	cancel()
 
-	// Stop workers
-	// Note: Implement graceful shutdown for each worker
-	// Example:
-	// schedulerWorker.Stop(shutdownCtx)
-	// locationFlusher.Stop(shutdownCtx)
-	// recurrenceWorker.Stop(shutdownCtx)
-
-	// Use context for potential cleanup
-	_ = shutdownCtx
+	// Stop workers gracefully
+	schedulerWorker.Stop()
 
 	logger.Info("Workers exited gracefully")
 }
