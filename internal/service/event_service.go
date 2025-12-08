@@ -214,14 +214,11 @@ func (s *EventService) createParticipants(ctx context.Context, entID, eventID uu
 
 	for _, input := range inputs {
 		participant := &domain.Participant{
-			ID:          uuid.New(),
-			EventID:     eventID,
-			EntityID:    entID,
-			Name:        input.Name,
-			PhoneNumber: input.PhoneNumber,
-			Email:       input.Email,
-			Status:      domain.ParticipantStatusPending,
-			Metadata:    input.Metadata,
+			ID:       uuid.New(),
+			EventID:  eventID,
+			EntityID: entID,
+			Status:   domain.ParticipantStatusPending,
+			Metadata: input.Metadata,
 		}
 
 		if err := s.participantRepo.Create(ctx, participant); err != nil {

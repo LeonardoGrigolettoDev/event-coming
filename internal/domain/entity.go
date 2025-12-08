@@ -9,26 +9,42 @@ import (
 // EntityType representa o tipo da entidade
 type EntityType string
 type EntityPermission string
+type DocumentType string
+type EntityRelationship string
 
 const (
-	EntityTypeIndividual EntityType = "individual" // Pessoa física
-	EntityTypeCompany    EntityType = "company"    // Pessoa jurídica
+	EntityTypeNaturalPerson EntityType = "natural person" // Pessoa física
+	EntityTypeLegalEntity   EntityType = "legal entity"   // Pessoa jurídica
 )
 
 const (
-	EntityPermissionAdmin       EntityPermission = "Admin"
-	EntityPermissionStakeholder EntityPermission = "Stakeholder"
-	EntityPermissionParticipant EntityPermission = "Participant"
+	EntityPermissionAdmin       EntityPermission = "admin"
+	EntityPermissionStakeholder EntityPermission = "stakeholder"
+	EntityPermissionParticipant EntityPermission = "participant"
 )
 
-// Entity representa uma entidade cadastrada no sistema
-// Pode ser uma pessoa física, empresa ou organização
-// Organizações podem criar eventos, pessoas podem ser participants
+const (
+	DocumentTypeCPF  = "cpf"
+	DocumentTypeCNPJ = "cnpj"
+	DocumentTypeRG   = "rg"
+)
+
+const (
+	RelationshipParent    EntityRelationship = "parent"
+	RelationshipChild     EntityRelationship = "child"
+	RelationshipSpouse    EntityRelationship = "spouse"
+	RelationshipGuardian  EntityRelationship = "guardian"
+	RelationshipDependent EntityRelationship = "dependent"
+	RelationshipEmployee  EntityRelationship = "employee"
+	RelationshipManager   EntityRelationship = "manager"
+)
+
 type Entity struct {
 	ID               uuid.UUID              `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Relationship     EntityRelationship     `json:"relationship,omitempty" db:"relationship" gorm:"size:50"`
 	ParentID         *uuid.UUID             `json:"parent_id,omitempty" db:"parent_id" gorm:"type:uuid;index"` // Entidade pai (hierarquia)
-	Type             EntityType             `json:"type" db:"type" gorm:"size:50;not null;default:'individual';index"`
-	Name             string                 `json:"name" db:"name" gorm:"size:200;not null"`
+	Type             EntityType             `json:"type" db:"type" gorm:"size:50;not null;default:'natural person';index"`
+	Name             string                 `json:"name" db:"name" gorm:"size:200"`
 	Email            *string                `json:"email,omitempty" db:"email" gorm:"size:255;index"`
 	PhoneNumber      *string                `json:"phone_number,omitempty" db:"phone_number" gorm:"size:20;index"`
 	Document         *string                `json:"document,omitempty" db:"document" gorm:"size:50;index"` // CPF, CNPJ, etc.
@@ -37,6 +53,7 @@ type Entity struct {
 	CreatedAt        time.Time              `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt        time.Time              `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
 	EntityPermission EntityPermission       `json:"entity_permission" db:"entity_permission" gorm:"size:50;not null;default:'Participant'"`
+	DocumentType     DocumentType           `json:"document_type" db:"document_type" gorm:"size:20"`
 	// Relacionamentos
 	Parent       *Entity       `json:"parent,omitempty" gorm:"foreignKey:ParentID"`
 	Children     []Entity      `json:"children,omitempty" gorm:"foreignKey:ParentID"`

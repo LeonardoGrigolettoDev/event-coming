@@ -176,13 +176,11 @@ func (s *EventCacheService) SetConfirmation(ctx context.Context, entID, eventID 
 	key := fmt.Sprintf("confirmation:%s:%s:%s", entID, eventID, participant.ID)
 
 	data := dto.ParticipantConfirmationData{
-		ParticipantID:   participant.ID,
-		ParticipantName: participant.Name,
-		PhoneNumber:     participant.PhoneNumber,
-		Status:          participant.Status,
-		ConfirmedAt:     participant.ConfirmedAt,
-		CheckedInAt:     participant.CheckedInAt,
-		UpdatedAt:       time.Now(),
+		ParticipantID: participant.ID,
+		Status:        participant.Status,
+		ConfirmedAt:   participant.ConfirmedAt,
+		CheckedInAt:   participant.CheckedInAt,
+		UpdatedAt:     time.Now(),
 	}
 
 	jsonData, err := json.Marshal(data)

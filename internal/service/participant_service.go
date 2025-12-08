@@ -51,15 +51,12 @@ func (s *ParticipantService) Create(ctx context.Context, entID, eventID uuid.UUI
 
 	// Criar participante
 	participant := &domain.Participant{
-		ID:          uuid.New(),
-		EventID:     event.ID,
-		InstanceID:  req.InstanceID,
-		EntityID:    entID,
-		Name:        req.Name,
-		PhoneNumber: req.PhoneNumber,
-		Email:       req.Email,
-		Status:      domain.ParticipantStatusPending,
-		Metadata:    req.Metadata,
+		ID:         uuid.New(),
+		EventID:    event.ID,
+		InstanceID: req.InstanceID,
+		EntityID:   entID,
+		Status:     domain.ParticipantStatusPending,
+		Metadata:   req.Metadata,
 	}
 
 	if err := s.participantRepo.Create(ctx, participant); err != nil {

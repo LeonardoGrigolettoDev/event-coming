@@ -20,6 +20,7 @@ type Router struct {
 	participantHandler *handler.ParticipantHandler
 	eventHandler       *handler.EventHandler
 	entityHandler      *handler.EntityHandler
+	locationHandler    *handler.LocationHandler
 }
 
 // NewRouter creates a new router
@@ -32,6 +33,7 @@ func NewRouter(
 	participantHandler *handler.ParticipantHandler,
 	eventHandler *handler.EventHandler,
 	entityHandler *handler.EntityHandler,
+	locationHandler *handler.LocationHandler,
 ) *Router {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -49,6 +51,7 @@ func NewRouter(
 		participantHandler: participantHandler,
 		eventHandler:       eventHandler,
 		entityHandler:      entityHandler,
+		locationHandler:    locationHandler,
 	}
 }
 
@@ -130,6 +133,9 @@ func (r *Router) Setup() *gin.Engine {
 				events.POST("/:id/participants", r.participantHandler.Create)
 				events.GET("/:id/participants", r.participantHandler.ListByEvent)
 				events.POST("/:id/participants/batch", r.participantHandler.BatchCreate)
+
+				// Locations for event (all participants)
+				events.GET("/:id/locations", r.locationHandler.GetEventLocations)
 			}
 
 			// Participants
@@ -142,23 +148,16 @@ func (r *Router) Setup() *gin.Engine {
 				participants.POST("/:id/check-in", r.participantHandler.CheckIn)
 
 				// Locations
-				participants.POST("/:id/locations", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				participants.GET("/:id/locations", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
+				participants.POST("/:id/locations", r.locationHandler.CreateLocation)
+				participants.GET("/:id/locations", r.locationHandler.GetLocationHistory)
+				participants.GET("/:id/locations/latest", r.locationHandler.GetLatestLocation)
 			}
 
 			// ETA
 			eta := protected.Group("/eta")
 			{
-				eta.GET("/events/:event_id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				eta.GET("/participants/:participant_id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
+				eta.GET("/events/:id", r.locationHandler.GetEventETAs)
+				eta.GET("/participants/:id", r.locationHandler.GetParticipantETA)
 			}
 
 			// Event cache (locations and confirmations from Redis) - movido para evitar conflito

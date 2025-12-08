@@ -24,9 +24,6 @@ type Participant struct {
 	InstanceID  *uuid.UUID             `json:"instance_id,omitempty" db:"instance_id" gorm:"type:uuid;index"`
 	EntityID    uuid.UUID              `json:"entity_id" db:"entity_id" gorm:"type:uuid;not null;index"`          // Entidade dona do evento
 	RefEntityID *uuid.UUID             `json:"ref_entity_id,omitempty" db:"ref_entity_id" gorm:"type:uuid;index"` // Referência opcional para entidade cadastrada do participante
-	Name        string                 `json:"name" db:"name" gorm:"size:100"`
-	PhoneNumber string                 `json:"phone_number" db:"phone_number" gorm:"size:20;not null"`
-	Email       *string                `json:"email,omitempty" db:"email" gorm:"size:255"`
 	Status      ParticipantStatus      `json:"status" db:"status" gorm:"size:50;not null;default:'pending'"`
 	ConfirmedAt *time.Time             `json:"confirmed_at,omitempty" db:"confirmed_at"`
 	CheckedInAt *time.Time             `json:"checked_in_at,omitempty" db:"checked_in_at"`

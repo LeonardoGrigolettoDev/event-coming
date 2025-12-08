@@ -9,6 +9,7 @@ import (
 	"event-coming/internal/repository/postgres"
 	"event-coming/internal/router"
 	"event-coming/internal/service"
+	"event-coming/internal/service/eta"
 	"event-coming/internal/websocket"
 	"fmt"
 	"net/http"
@@ -94,6 +95,10 @@ func main() {
 	eventRepo := postgres.NewEventRepository(db)
 	schedulerRepo := postgres.NewSchedulerRepository(db)
 	entityRepo := postgres.NewEntityRepository(db)
+	locationRepo := postgres.NewLocationRepository(db)
+
+	// Initialize location buffer
+	locationBuffer := cache.NewLocationBuffer(redisClient)
 
 	// Initialize services
 	authService := service.NewAuthService(
@@ -106,6 +111,8 @@ func main() {
 	participantService := service.NewParticipantService(participantRepo, eventRepo)
 	eventService := service.NewEventService(eventRepo, schedulerRepo, participantRepo)
 	entityService := service.NewEntityService(entityRepo)
+	locationService := service.NewLocationService(locationRepo, participantRepo, eventRepo, locationBuffer, logger)
+	etaService := eta.NewETAService(locationRepo, &cfg.OSRM)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
@@ -114,9 +121,10 @@ func main() {
 	participantHandler := handler.NewParticipantHandler(participantService, logger)
 	eventHandler := handler.NewEventHandler(eventService, logger)
 	entityHandler := handler.NewEntityHandler(entityService, logger)
+	locationHandler := handler.NewLocationHandler(locationService, etaService, eventService)
 
 	// Setup router
-	r := router.NewRouter(cfg, logger, authHandler, websocketHandler, eventCacheHandler, participantHandler, eventHandler, entityHandler)
+	r := router.NewRouter(cfg, logger, authHandler, websocketHandler, eventCacheHandler, participantHandler, eventHandler, entityHandler, locationHandler)
 	engine := r.Setup()
 
 	// Create HTTP server

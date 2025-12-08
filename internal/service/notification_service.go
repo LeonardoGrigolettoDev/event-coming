@@ -45,6 +45,14 @@ func NewNotificationService(
 
 // SendConfirmationRequest envia pedido de confirmação via WhatsApp
 func (s *notificationServiceImpl) SendConfirmationRequest(ctx context.Context, event *domain.Event, participant *domain.Participant) error {
+	if participant.Entity == nil || participant.Entity.PhoneNumber == nil {
+		s.logger.Warn("Participant has no phone number",
+			zap.String("participant_id", participant.ID.String()),
+		)
+		return nil
+	}
+	name := participant.Entity.Name
+	phone := *participant.Entity.PhoneNumber
 	message := fmt.Sprintf(
 		"🎫 *Confirmação de Presença*\n\n"+
 			"Olá %s!\n\n"+
@@ -54,16 +62,24 @@ func (s *notificationServiceImpl) SendConfirmationRequest(ctx context.Context, e
 			"Por favor, confirme sua presença respondendo:\n"+
 			"✅ *SIM* - para confirmar\n"+
 			"❌ *NÃO* - para recusar",
-		participant.Name,
+		name,
 		event.Name,
 		event.StartTime.Format("02/01/2006 às 15:04"),
 	)
 
-	return s.SendMessage(ctx, participant.PhoneNumber, message)
+	return s.SendMessage(ctx, phone, message)
 }
 
 // SendReminder envia lembrete do evento
 func (s *notificationServiceImpl) SendReminder(ctx context.Context, event *domain.Event, participant *domain.Participant) error {
+	if participant.Entity == nil || participant.Entity.PhoneNumber == nil {
+		s.logger.Warn("Participant has no phone number",
+			zap.String("participant_id", participant.ID.String()),
+		)
+		return nil
+	}
+	name := participant.Entity.Name
+	phone := *participant.Entity.PhoneNumber
 	message := fmt.Sprintf(
 		"⏰ *Lembrete de Evento*\n\n"+
 			"Olá %s!\n\n"+
@@ -72,27 +88,35 @@ func (s *notificationServiceImpl) SendReminder(ctx context.Context, event *domai
 			"📅 %s\n"+
 			"📍 %s\n\n"+
 			"Não se esqueça! 🎉",
-		participant.Name,
+		name,
 		event.Name,
 		event.StartTime.Format("02/01/2006 às 15:04"),
 		getLocationAddress(event),
 	)
 
-	return s.SendMessage(ctx, participant.PhoneNumber, message)
+	return s.SendMessage(ctx, phone, message)
 }
 
 // SendLocationRequest solicita a localização do participante
 func (s *notificationServiceImpl) SendLocationRequest(ctx context.Context, event *domain.Event, participant *domain.Participant) error {
+	if participant.Entity == nil || participant.Entity.PhoneNumber == nil {
+		s.logger.Warn("Participant has no phone number",
+			zap.String("participant_id", participant.ID.String()),
+		)
+		return nil
+	}
+	name := participant.Entity.Name
+	phone := *participant.Entity.PhoneNumber
 	message := fmt.Sprintf(
 		"📍 *Compartilhe sua Localização*\n\n"+
 			"Olá %s!\n\n"+
 			"O evento *%s* está prestes a começar.\n\n"+
 			"Por favor, compartilhe sua localização atual para calcularmos seu tempo de chegada.",
-		participant.Name,
+		name,
 		event.Name,
 	)
 
-	return s.SendMessage(ctx, participant.PhoneNumber, message)
+	return s.SendMessage(ctx, phone, message)
 }
 
 // SendETAUpdate envia atualização do tempo estimado de chegada
@@ -110,7 +134,6 @@ func (s *notificationServiceImpl) SendETAUpdate(ctx context.Context, event *doma
 
 	// Aqui você pode enviar para o organizador do evento
 	s.logger.Info("ETA Update",
-		zap.String("participant", participant.Name),
 		zap.Int("eta_minutes", etaMinutes),
 		zap.String("eta_text", etaText),
 	)
