@@ -9,6 +9,7 @@ import (
 	"event-coming/internal/repository/postgres"
 	"event-coming/internal/router"
 	"event-coming/internal/service"
+	"event-coming/internal/websocket"
 	"fmt"
 	"net/http"
 	"os"
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	// Create context for graceful shutdown
-	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Connect to PostgreSQL
@@ -73,26 +74,35 @@ func main() {
 	defer redisClient.Close()
 	logger.Info("Connected to Redis")
 
+	// Initialize WebSocket Hub and PubSub
+	wsHub := websocket.NewHub(logger)
+	wsPubSub := websocket.NewPubSub(redisClient, wsHub, logger)
+
+	// Start WebSocket Hub
+	go wsHub.Run(ctx)
+
+	// Subscribe to all Redis channels
+	if err := wsPubSub.SubscribeAll(ctx); err != nil {
+		logger.Warn("Failed to subscribe to Redis PubSub", zap.Error(err))
+	}
+
 	// Initialize repositories
-	// Note: Add repository initialization here when implementing handlers
-	// Example:
-	// orgRepo := postgres.NewOrganizationRepository(db)
 	userRepo := postgres.NewUserRepository(db)
 	tokenRepo := postgres.NewRefreshTokenRepository(db)
 
 	// Initialize services
-	// Note: Add service initialization here when implementing handlers
 	authService := service.NewAuthService(
 		userRepo,
 		tokenRepo,
 		&cfg.JWT,
 	)
+
 	// Initialize handlers
-	// Note: Add handler initialization here when implementing handlers
 	authHandler := handler.NewAuthHandler(authService)
+	websocketHandler := handler.NewWebSocketHandler(wsHub, wsPubSub, logger)
 
 	// Setup router
-	r := router.NewRouter(cfg, logger, authHandler)
+	r := router.NewRouter(cfg, logger, authHandler, websocketHandler)
 	engine := r.Setup()
 
 	// Create HTTP server

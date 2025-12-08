@@ -11,14 +11,20 @@ import (
 
 // Router holds all dependencies needed for routing
 type Router struct {
-	engine      *gin.Engine
-	config      *config.Config
-	logger      *zap.Logger
-	authHandler *handler.AuthHandler
+	engine           *gin.Engine
+	config           *config.Config
+	logger           *zap.Logger
+	authHandler      *handler.AuthHandler
+	websocketHandler *handler.WebSocketHandler
 }
 
 // NewRouter creates a new router
-func NewRouter(cfg *config.Config, logger *zap.Logger, authHandler *handler.AuthHandler) *Router {
+func NewRouter(
+	cfg *config.Config,
+	logger *zap.Logger,
+	authHandler *handler.AuthHandler,
+	websocketHandler *handler.WebSocketHandler,
+) *Router {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -26,10 +32,11 @@ func NewRouter(cfg *config.Config, logger *zap.Logger, authHandler *handler.Auth
 	engine := gin.New()
 
 	return &Router{
-		engine:      engine,
-		config:      cfg,
-		logger:      logger,
-		authHandler: authHandler,
+		engine:           engine,
+		config:           cfg,
+		logger:           logger,
+		authHandler:      authHandler,
+		websocketHandler: websocketHandler,
 	}
 }
 
@@ -159,11 +166,12 @@ func (r *Router) Setup() *gin.Engine {
 				})
 			}
 
-			// WebSocket
-			protected.GET("/ws/events/:event_id", func(c *gin.Context) {
-				c.JSON(501, gin.H{"message": "not implemented"})
-			})
+			// WebSocket connections count (protected)
+			protected.GET("/events/:organization/:event/connections", r.websocketHandler.GetConnectionCount)
 		}
+
+		// WebSocket endpoint (fora do protected, autenticação via query param)
+		v1.GET("/ws/:organization/:event", r.websocketHandler.HandleConnection)
 	}
 
 	return r.engine
