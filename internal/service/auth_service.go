@@ -32,20 +32,23 @@ type AuthService interface {
 }
 
 type authServiceImpl struct {
-	userRepo  repository.UserRepository
-	tokenRepo repository.RefreshTokenRepository
-	config    *config.JWTConfig
+	userRepo   repository.UserRepository
+	tokenRepo  repository.RefreshTokenRepository
+	entityRepo repository.EntityRepository
+	config     *config.JWTConfig
 }
 
 func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.RefreshTokenRepository,
+	entityRepo repository.EntityRepository,
 	config *config.JWTConfig,
 ) AuthService {
 	return &authServiceImpl{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		config:    config,
+		userRepo:   userRepo,
+		tokenRepo:  tokenRepo,
+		entityRepo: entityRepo,
+		config:     config,
 	}
 }
 
@@ -80,11 +83,54 @@ func (s *authServiceImpl) Register(ctx context.Context, req dto.RegisterRequest)
 		return nil, err
 	}
 
-	// 4. Retornar resposta (sem tokens - usuário precisa fazer login)
+	// 4. Criar entidade se fornecida
+	var entityResponse *dto.EntityResponse
+	if req.Entity != nil {
+		// Verificar documento único se fornecido
+		if req.Entity.Document != nil && *req.Entity.Document != "" {
+			existing, _ := s.entityRepo.GetByDocument(ctx, *req.Entity.Document)
+			if existing != nil {
+				return nil, domain.ErrConflict
+			}
+		}
+
+		entity := &domain.Entity{
+			ID:               uuid.New(),
+			Type:             domain.EntityType(req.Entity.Type),
+			Name:             req.Entity.Name,
+			Email:            req.Entity.Email,
+			PhoneNumber:      req.Entity.PhoneNumber,
+			Document:         req.Entity.Document,
+			IsActive:         true,
+			EntityPermission: domain.EntityPermissionAdmin, // Criador é admin
+			Metadata:         req.Entity.Metadata,
+		}
+
+		if err := s.entityRepo.Create(ctx, entity); err != nil {
+			return nil, err
+		}
+
+		// 5. Associar usuário à entidade como owner
+		userEntity := &domain.UserEntity{
+			ID:       uuid.New(),
+			UserID:   user.ID,
+			EntityID: entity.ID,
+			Role:     domain.UserRoleEntityOwner,
+		}
+
+		if err := s.userRepo.AddToEntity(ctx, userEntity); err != nil {
+			return nil, err
+		}
+
+		entityResponse = dto.ToEntityResponse(entity)
+	}
+
+	// 6. Retornar resposta (sem tokens - usuário precisa fazer login)
 	return &dto.RegisterResponse{
-		ID:    user.ID.String(),
-		Name:  user.Name,
-		Email: user.Email,
+		ID:     user.ID.String(),
+		Name:   user.Name,
+		Email:  user.Email,
+		Entity: entityResponse,
 	}, nil
 }
 

@@ -19,6 +19,7 @@ type Router struct {
 	eventCacheHandler  *handler.EventCacheHandler
 	participantHandler *handler.ParticipantHandler
 	eventHandler       *handler.EventHandler
+	entityHandler      *handler.EntityHandler
 }
 
 // NewRouter creates a new router
@@ -30,6 +31,7 @@ func NewRouter(
 	eventCacheHandler *handler.EventCacheHandler,
 	participantHandler *handler.ParticipantHandler,
 	eventHandler *handler.EventHandler,
+	entityHandler *handler.EntityHandler,
 ) *Router {
 	if !cfg.App.Debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -46,6 +48,7 @@ func NewRouter(
 		eventCacheHandler:  eventCacheHandler,
 		participantHandler: participantHandler,
 		eventHandler:       eventHandler,
+		entityHandler:      entityHandler,
 	}
 }
 
@@ -97,21 +100,16 @@ func (r *Router) Setup() *gin.Engine {
 		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware(&r.config.JWT))
 		{
-			// Organizations
-			orgs := protected.Group("/organizations")
+			// Entities
+			entities := protected.Group("/entities")
 			{
-				orgs.POST("", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				orgs.GET("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				orgs.PUT("/:id", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
-				orgs.GET("", func(c *gin.Context) {
-					c.JSON(501, gin.H{"message": "not implemented"})
-				})
+				entities.POST("", r.entityHandler.Create)
+				entities.GET("", r.entityHandler.List)
+				entities.GET("/:id", r.entityHandler.GetByID)
+				entities.PUT("/:id", r.entityHandler.Update)
+				entities.DELETE("/:id", r.entityHandler.Delete)
+				entities.GET("/:id/children", r.entityHandler.ListByParent)
+				entities.GET("/document/:document", r.entityHandler.GetByDocument)
 			}
 
 			// Events
