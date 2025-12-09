@@ -36,12 +36,12 @@ func NewWebSocketHandler(hub *websocket.Hub, pubsub *websocket.PubSub, logger *z
 }
 
 // HandleConnection processa novas conexões WebSocket
-// GET /api/ws/:organization/:event
+// GET /api/ws/:entity/:event
 func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
-	orgID := c.Param("organization")
+	entityID := c.Param("entity")
 	eventID := c.Param("event")
 
-	if orgID == "" || eventID == "" {
+	if entityID == "" || eventID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "organization and event are required"})
 		return
 	}
@@ -58,16 +58,16 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	}
 
 	// Criar cliente
-	client := websocket.NewClient(conn, h.hub, orgID, eventID, userIDStr, h.logger)
+	client := websocket.NewClient(conn, h.hub, entityID, eventID, userIDStr, h.logger)
 
 	// Registrar no hub
 	h.hub.Register(client)
 
 	// Inscrever no Redis PubSub para este evento (se ainda não inscrito)
 	go func() {
-		if err := h.pubsub.Subscribe(c.Request.Context(), orgID, eventID); err != nil {
+		if err := h.pubsub.Subscribe(c.Request.Context(), entityID, eventID); err != nil {
 			h.logger.Warn("Failed to subscribe to Redis channel",
-				zap.String("org_id", orgID),
+				zap.String("org_id", entityID),
 				zap.String("event_id", eventID),
 				zap.Error(err),
 			)
@@ -79,7 +79,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	go client.ReadPump()
 
 	h.logger.Info("WebSocket connection established",
-		zap.String("org_id", orgID),
+		zap.String("org_id", entityID),
 		zap.String("event_id", eventID),
 		zap.String("client_id", client.ID),
 	)
@@ -88,13 +88,13 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 // GetConnectionCount retorna o número de conexões para um evento
 // GET /api/v1/events/:org/:event/connections
 // func (h *WebSocketHandler) GetConnectionCount(c *gin.Context) {
-// 	orgID := c.Param("organization")
+// 	entityID := c.Param("entity")
 // 	eventID := c.Param("event")
 
-// 	count := h.hub.GetClientCount(orgID, eventID)
+// 	count := h.hub.GetClientCount(entityID, eventID)
 
 // 	c.JSON(http.StatusOK, gin.H{
-// 		"organization_id": orgID,
+// 		"organization_id": entityID,
 // 		"event_id":        eventID,
 // 		"connections":     count,
 // 	})

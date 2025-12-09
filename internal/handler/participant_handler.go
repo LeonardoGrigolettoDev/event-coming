@@ -30,15 +30,15 @@ func NewParticipantHandler(service *service.ParticipantService, logger *zap.Logg
 // Create cria um novo participante vinculado a um evento
 // POST /api/v1/events/:event_id/participants
 func (h *ParticipantHandler) Create(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *ParticipantHandler) Create(c *gin.Context) {
 		return
 	}
 
-	participant, err := h.service.Create(c.Request.Context(), orgID, eventID, &req)
+	participant, err := h.service.Create(c.Request.Context(), entityID, eventID, &req)
 	if err != nil {
 		h.logger.Error("Failed to create participant",
 			zap.String("event_id", eventIDStr),
@@ -81,15 +81,15 @@ func (h *ParticipantHandler) Create(c *gin.Context) {
 // GetByID busca um participante por ID
 // GET /api/v1/participants/:id
 func (h *ParticipantHandler) GetByID(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *ParticipantHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	participant, err := h.service.GetByID(c.Request.Context(), orgID, participantID)
+	participant, err := h.service.GetByID(c.Request.Context(), entityID, participantID)
 	if err != nil {
 		h.logger.Error("Failed to get participant",
 			zap.String("participant_id", participantIDStr),
@@ -116,15 +116,15 @@ func (h *ParticipantHandler) GetByID(c *gin.Context) {
 // Update atualiza um participante
 // PUT /api/v1/participants/:id
 func (h *ParticipantHandler) Update(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -141,7 +141,7 @@ func (h *ParticipantHandler) Update(c *gin.Context) {
 		return
 	}
 
-	participant, err := h.service.Update(c.Request.Context(), orgID, participantID, &req)
+	participant, err := h.service.Update(c.Request.Context(), entityID, participantID, &req)
 	if err != nil {
 		h.logger.Error("Failed to update participant",
 			zap.String("participant_id", participantIDStr),
@@ -157,15 +157,15 @@ func (h *ParticipantHandler) Update(c *gin.Context) {
 // Delete remove um participante
 // DELETE /api/v1/participants/:id
 func (h *ParticipantHandler) Delete(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *ParticipantHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), orgID, participantID); err != nil {
+	if err := h.service.Delete(c.Request.Context(), entityID, participantID); err != nil {
 		h.logger.Error("Failed to delete participant",
 			zap.String("participant_id", participantIDStr),
 			zap.Error(err),
@@ -191,15 +191,15 @@ func (h *ParticipantHandler) Delete(c *gin.Context) {
 // ListByEvent lista participantes de um evento
 // GET /api/v1/events/:event_id/participants
 func (h *ParticipantHandler) ListByEvent(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -221,7 +221,7 @@ func (h *ParticipantHandler) ListByEvent(c *gin.Context) {
 		perPage = 20
 	}
 
-	participants, total, err := h.service.ListByEvent(c.Request.Context(), orgID, eventID, page, perPage)
+	participants, total, err := h.service.ListByEvent(c.Request.Context(), entityID, eventID, page, perPage)
 	if err != nil {
 		h.logger.Error("Failed to list participants",
 			zap.String("event_id", eventIDStr),
@@ -237,15 +237,15 @@ func (h *ParticipantHandler) ListByEvent(c *gin.Context) {
 // Confirm confirma a participação
 // POST /api/v1/participants/:id/confirm
 func (h *ParticipantHandler) Confirm(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -256,7 +256,7 @@ func (h *ParticipantHandler) Confirm(c *gin.Context) {
 		return
 	}
 
-	participant, err := h.service.ConfirmParticipant(c.Request.Context(), orgID, participantID)
+	participant, err := h.service.ConfirmParticipant(c.Request.Context(), entityID, participantID)
 	if err != nil {
 		h.logger.Error("Failed to confirm participant",
 			zap.String("participant_id", participantIDStr),
@@ -272,15 +272,15 @@ func (h *ParticipantHandler) Confirm(c *gin.Context) {
 // CheckIn faz check-in do participante
 // POST /api/v1/participants/:id/check-in
 func (h *ParticipantHandler) CheckIn(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -291,7 +291,7 @@ func (h *ParticipantHandler) CheckIn(c *gin.Context) {
 		return
 	}
 
-	participant, err := h.service.CheckInParticipant(c.Request.Context(), orgID, participantID)
+	participant, err := h.service.CheckInParticipant(c.Request.Context(), entityID, participantID)
 	if err != nil {
 		h.logger.Error("Failed to check-in participant",
 			zap.String("participant_id", participantIDStr),
@@ -307,15 +307,15 @@ func (h *ParticipantHandler) CheckIn(c *gin.Context) {
 // BatchCreate cria múltiplos participantes
 // POST /api/v1/events/:event_id/participants/batch
 func (h *ParticipantHandler) BatchCreate(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -332,7 +332,7 @@ func (h *ParticipantHandler) BatchCreate(c *gin.Context) {
 		return
 	}
 
-	participants, errors := h.service.BatchCreate(c.Request.Context(), orgID, eventID, &req)
+	participants, errors := h.service.BatchCreate(c.Request.Context(), entityID, eventID, &req)
 
 	// Preparar resposta
 	errorMessages := make([]string, len(errors))

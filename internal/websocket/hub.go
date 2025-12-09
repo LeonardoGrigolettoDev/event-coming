@@ -58,7 +58,7 @@ type LocationUpdateData struct {
 // Client representa uma conexão WebSocket
 type Client struct {
 	ID             string
-	OrganizationID string
+	EntityID string
 	EventID        string
 	UserID         string
 	conn           *websocket.Conn
@@ -68,10 +68,10 @@ type Client struct {
 }
 
 // NewClient cria um novo cliente WebSocket
-func NewClient(conn *websocket.Conn, hub *Hub, orgID, eventID, userID string, logger *zap.Logger) *Client {
+func NewClient(conn *websocket.Conn, hub *Hub, entityID, eventID, userID string, logger *zap.Logger) *Client {
 	return &Client{
 		ID:             uuid.New().String(),
-		OrganizationID: orgID,
+		EntityID: entityID,
 		EventID:        eventID,
 		UserID:         userID,
 		conn:           conn,
@@ -174,7 +174,7 @@ type Hub struct {
 
 // BroadcastMessage representa uma mensagem para broadcast
 type BroadcastMessage struct {
-	OrganizationID string
+	EntityID string
 	EventID        string
 	Message        []byte
 }
@@ -211,15 +211,15 @@ func (h *Hub) Run(ctx context.Context) {
 }
 
 // getChannelKey retorna a chave do canal para um evento
-func getChannelKey(orgID, eventID string) string {
-	return orgID + ":" + eventID
+func getChannelKey(entityID, eventID string) string {
+	return entityID + ":" + eventID
 }
 
 func (h *Hub) addClient(client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	key := getChannelKey(client.OrganizationID, client.EventID)
+	key := getChannelKey(client.EntityID, client.EventID)
 	if h.clients[key] == nil {
 		h.clients[key] = make(map[*Client]bool)
 	}
@@ -227,7 +227,7 @@ func (h *Hub) addClient(client *Client) {
 
 	h.logger.Info("Client connected",
 		zap.String("client_id", client.ID),
-		zap.String("org_id", client.OrganizationID),
+		zap.String("org_id", client.EntityID),
 		zap.String("event_id", client.EventID),
 		zap.Int("total_clients", len(h.clients[key])),
 	)
@@ -237,7 +237,7 @@ func (h *Hub) removeClient(client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	key := getChannelKey(client.OrganizationID, client.EventID)
+	key := getChannelKey(client.EntityID, client.EventID)
 	if clients, ok := h.clients[key]; ok {
 		if _, exists := clients[client]; exists {
 			delete(clients, client)
@@ -245,7 +245,7 @@ func (h *Hub) removeClient(client *Client) {
 
 			h.logger.Info("Client disconnected",
 				zap.String("client_id", client.ID),
-				zap.String("org_id", client.OrganizationID),
+				zap.String("org_id", client.EntityID),
 				zap.String("event_id", client.EventID),
 				zap.Int("remaining_clients", len(clients)),
 			)
@@ -262,7 +262,7 @@ func (h *Hub) broadcastToEvent(msg *BroadcastMessage) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	key := getChannelKey(msg.OrganizationID, msg.EventID)
+	key := getChannelKey(msg.EntityID, msg.EventID)
 	clients, ok := h.clients[key]
 	if !ok {
 		return
@@ -280,14 +280,14 @@ func (h *Hub) broadcastToEvent(msg *BroadcastMessage) {
 }
 
 // Broadcast envia uma mensagem para todos os clientes de um evento
-func (h *Hub) Broadcast(orgID, eventID string, msg *Message) error {
+func (h *Hub) Broadcast(entityID, eventID string, msg *Message) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
 
 	h.broadcast <- &BroadcastMessage{
-		OrganizationID: orgID,
+		EntityID: entityID,
 		EventID:        eventID,
 		Message:        data,
 	}
@@ -296,11 +296,11 @@ func (h *Hub) Broadcast(orgID, eventID string, msg *Message) error {
 }
 
 // GetClientCount retorna o número de clientes conectados a um evento
-func (h *Hub) GetClientCount(orgID, eventID string) int {
+func (h *Hub) GetClientCount(entityID, eventID string) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	key := getChannelKey(orgID, eventID)
+	key := getChannelKey(entityID, eventID)
 	if clients, ok := h.clients[key]; ok {
 		return len(clients)
 	}

@@ -27,18 +27,18 @@ func NewPubSub(client *redis.Client, hub *Hub, logger *zap.Logger) *PubSub {
 }
 
 // getRedisChannel retorna o nome do canal Redis para um evento
-func getRedisChannel(orgID, eventID string) string {
-	return fmt.Sprintf("ws:event:%s:%s", orgID, eventID)
+func getRedisChannel(entityID, eventID string) string {
+	return fmt.Sprintf("ws:event:%s:%s", entityID, eventID)
 }
 
 // Publish publica uma mensagem no Redis para todas as instâncias
-func (p *PubSub) Publish(ctx context.Context, orgID, eventID string, msg *Message) error {
+func (p *PubSub) Publish(ctx context.Context, entityID, eventID string, msg *Message) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	channel := getRedisChannel(orgID, eventID)
+	channel := getRedisChannel(entityID, eventID)
 	if err := p.client.Publish(ctx, channel, data).Err(); err != nil {
 		return fmt.Errorf("failed to publish to Redis: %w", err)
 	}
@@ -52,8 +52,8 @@ func (p *PubSub) Publish(ctx context.Context, orgID, eventID string, msg *Messag
 }
 
 // Subscribe se inscreve em um canal de evento e repassa para o Hub local
-func (p *PubSub) Subscribe(ctx context.Context, orgID, eventID string) error {
-	channel := getRedisChannel(orgID, eventID)
+func (p *PubSub) Subscribe(ctx context.Context, entityID, eventID string) error {
+	channel := getRedisChannel(entityID, eventID)
 	pubsub := p.client.Subscribe(ctx, channel)
 
 	// Verificar se a inscrição foi bem-sucedida
@@ -87,7 +87,7 @@ func (p *PubSub) Subscribe(ctx context.Context, orgID, eventID string) error {
 				}
 
 				// Broadcast para clientes locais
-				if err := p.hub.Broadcast(orgID, eventID, &msg); err != nil {
+				if err := p.hub.Broadcast(entityID, eventID, &msg); err != nil {
 					p.logger.Error("Failed to broadcast message", zap.Error(err))
 				}
 			}
@@ -127,13 +127,13 @@ func (p *PubSub) SubscribeAll(ctx context.Context) error {
 					return
 				}
 
-				// Extrair orgID e eventID do canal
-				// Formato: ws:event:{orgID}:{eventID}
-				var orgID, eventID string
-				_, err := fmt.Sscanf(redisMsg.Channel, "ws:event:%s", &orgID)
+				// Extrair entityID e eventID do canal
+				// Formato: ws:event:{entityID}:{eventID}
+				var entityID, eventID string
+				_, err := fmt.Sscanf(redisMsg.Channel, "ws:event:%s", &entityID)
 				if err != nil {
 					// Tentar parse manual
-					orgID, eventID = parseChannel(redisMsg.Channel)
+					entityID, eventID = parseChannel(redisMsg.Channel)
 				}
 
 				var msg Message
@@ -143,7 +143,7 @@ func (p *PubSub) SubscribeAll(ctx context.Context) error {
 				}
 
 				// Broadcast para clientes locais
-				if err := p.hub.Broadcast(orgID, eventID, &msg); err != nil {
+				if err := p.hub.Broadcast(entityID, eventID, &msg); err != nil {
 					p.logger.Error("Failed to broadcast message", zap.Error(err))
 				}
 			}
@@ -153,16 +153,16 @@ func (p *PubSub) SubscribeAll(ctx context.Context) error {
 	return nil
 }
 
-// parseChannel extrai orgID e eventID do nome do canal
-func parseChannel(channel string) (orgID, eventID string) {
-	// ws:event:{orgID}:{eventID}
+// parseChannel extrai entityID e eventID do nome do canal
+func parseChannel(channel string) (entityID, eventID string) {
+	// ws:event:{entityID}:{eventID}
 	var prefix string
-	fmt.Sscanf(channel, "%s:%s:%s", &prefix, &orgID, &eventID)
+	fmt.Sscanf(channel, "%s:%s:%s", &prefix, &entityID, &eventID)
 	return
 }
 
 // PublishLocationUpdate publica uma atualização de localização
-func (p *PubSub) PublishLocationUpdate(ctx context.Context, orgID, eventID string, data *LocationUpdateData) error {
+func (p *PubSub) PublishLocationUpdate(ctx context.Context, entityID, eventID string, data *LocationUpdateData) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -174,5 +174,5 @@ func (p *PubSub) PublishLocationUpdate(ctx context.Context, orgID, eventID strin
 		Data:      jsonData,
 	}
 
-	return p.Publish(ctx, orgID, eventID, msg)
+	return p.Publish(ctx, entityID, eventID, msg)
 }

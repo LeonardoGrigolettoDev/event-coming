@@ -62,9 +62,9 @@ func AuthMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 			c.Set("email", email)
 		}
 
-		if orgIDStr, ok := claims["organization_id"].(string); ok {
-			if orgID, err := uuid.Parse(orgIDStr); err == nil {
-				c.Set("organization_id", orgID)
+		if entityIDStr, ok := claims["entity_id"].(string); ok {
+			if orgID, err := uuid.Parse(entityIDStr); err == nil {
+				c.Set("entity_id", orgID)
 			}
 		}
 

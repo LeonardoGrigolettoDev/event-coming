@@ -25,21 +25,28 @@ func NewEventCacheHandler(service *service.EventCacheService, logger *zap.Logger
 }
 
 // GetEventCache busca informações de localização e confirmações do cache
-// GET /api/v1/:organization/:event
+// GET /api/v1/cache/:event
 func (h *EventCacheHandler) GetEventCache(c *gin.Context) {
-	orgIDStr := c.Param("organization")
-	eventIDStr := c.Param("event")
-
-	// Validar UUIDs
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
+	// Obter entity_id do contexto (setado pelo middleware de auth)
+	entityIDStr, exists := c.Get("entity_id")
+	if !exists {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid organization_id",
-			"message": "organization_id must be a valid UUID",
+			"error":   "bad_request",
+			"message": "entity_id not found in context",
 		})
 		return
 	}
 
+	entityID, err := uuid.Parse(entityIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid entity_id",
+			"message": "entity_id must be a valid UUID",
+		})
+		return
+	}
+
+	eventIDStr := c.Param("event")
 	eventID, err := uuid.Parse(eventIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -50,10 +57,10 @@ func (h *EventCacheHandler) GetEventCache(c *gin.Context) {
 	}
 
 	// Buscar dados do cache
-	data, err := h.service.GetEventCacheData(c.Request.Context(), orgID, eventID)
+	data, err := h.service.GetEventCacheData(c.Request.Context(), entityID, eventID)
 	if err != nil {
 		h.logger.Error("Failed to get event cache data",
-			zap.String("organization_id", orgIDStr),
+			zap.String("entity_id", entityIDStr.(string)),
 			zap.String("event_id", eventIDStr),
 			zap.Error(err),
 		)
@@ -68,24 +75,29 @@ func (h *EventCacheHandler) GetEventCache(c *gin.Context) {
 }
 
 // GetLocationsOnly busca apenas as localizações do cache
-// GET /api/v1/:organization/:event/locations
+// GET /api/v1/cache/:event/locations
 func (h *EventCacheHandler) GetLocationsOnly(c *gin.Context) {
-	orgIDStr := c.Param("organization")
-	eventIDStr := c.Param("event")
-
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization_id"})
+	// Obter entity_id do contexto (setado pelo middleware de auth)
+	entityIDStr, exists := c.Get("entity_id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "entity_id not found in context"})
 		return
 	}
 
+	entityID, err := uuid.Parse(entityIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entity_id"})
+		return
+	}
+
+	eventIDStr := c.Param("event")
 	eventID, err := uuid.Parse(eventIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event_id"})
 		return
 	}
 
-	data, err := h.service.GetEventCacheData(c.Request.Context(), orgID, eventID)
+	data, err := h.service.GetEventCacheData(c.Request.Context(), entityID, eventID)
 	if err != nil {
 		h.logger.Error("Failed to get locations", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
@@ -93,32 +105,37 @@ func (h *EventCacheHandler) GetLocationsOnly(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"organization_id": orgID,
-		"event_id":        eventID,
-		"locations":       data.Locations,
-		"total":           data.TotalLocations,
+		"entity_id": entityID,
+		"event_id":  eventID,
+		"locations": data.Locations,
+		"total":     data.TotalLocations,
 	})
 }
 
 // GetConfirmationsOnly busca apenas as confirmações do cache
-// GET /api/v1/:organization/:event/confirmations
+// GET /api/v1/cache/:event/confirmations
 func (h *EventCacheHandler) GetConfirmationsOnly(c *gin.Context) {
-	orgIDStr := c.Param("organization")
-	eventIDStr := c.Param("event")
-
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization_id"})
+	// Obter entity_id do contexto (setado pelo middleware de auth)
+	entityIDStr, exists := c.Get("entity_id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "entity_id not found in context"})
 		return
 	}
 
+	entityID, err := uuid.Parse(entityIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entity_id"})
+		return
+	}
+
+	eventIDStr := c.Param("event")
 	eventID, err := uuid.Parse(eventIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event_id"})
 		return
 	}
 
-	data, err := h.service.GetEventCacheData(c.Request.Context(), orgID, eventID)
+	data, err := h.service.GetEventCacheData(c.Request.Context(), entityID, eventID)
 	if err != nil {
 		h.logger.Error("Failed to get confirmations", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
@@ -126,7 +143,7 @@ func (h *EventCacheHandler) GetConfirmationsOnly(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"organization_id": orgID,
+		"entity_id":       entityID,
 		"event_id":        eventID,
 		"confirmations":   data.Confirmations,
 		"total_confirmed": data.TotalConfirmed,

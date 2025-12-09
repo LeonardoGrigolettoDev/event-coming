@@ -31,16 +31,16 @@ func NewEventHandler(service *service.EventService, logger *zap.Logger) *EventHa
 // Create cria um novo evento
 // POST /api/v1/events
 func (h *EventHandler) Create(c *gin.Context) {
-	// Obter organization_id do contexto (setado pelo middleware de auth)
-	orgIDStr, exists := c.Get("organization_id")
+	// Obter entity_id do contexto (setado pelo middleware de auth)
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -63,10 +63,10 @@ func (h *EventHandler) Create(c *gin.Context) {
 		return
 	}
 
-	event, err := h.service.Create(c.Request.Context(), orgID, userID, &req)
+	event, err := h.service.Create(c.Request.Context(), entityID, userID, &req)
 	if err != nil {
 		h.logger.Error("Failed to create event",
-			zap.String("organization_id", orgIDStr.(string)),
+			zap.String("entity_id", entityIDStr.(string)),
 			zap.Error(err),
 		)
 		response.Error(c, http.StatusInternalServerError, "internal_error", "failed to create event")
@@ -79,15 +79,15 @@ func (h *EventHandler) Create(c *gin.Context) {
 // GetByID busca um evento por ID
 // GET /api/v1/events/:id
 func (h *EventHandler) GetByID(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -103,9 +103,9 @@ func (h *EventHandler) GetByID(c *gin.Context) {
 
 	var event *dto.EventResponse
 	if includeParticipants {
-		event, err = h.service.GetByIDWithParticipants(c.Request.Context(), orgID, eventID)
+		event, err = h.service.GetByIDWithParticipants(c.Request.Context(), entityID, eventID)
 	} else {
-		event, err = h.service.GetByID(c.Request.Context(), orgID, eventID)
+		event, err = h.service.GetByID(c.Request.Context(), entityID, eventID)
 	}
 
 	if err != nil {
@@ -127,15 +127,15 @@ func (h *EventHandler) GetByID(c *gin.Context) {
 // Update atualiza um evento
 // PUT /api/v1/events/:id
 func (h *EventHandler) Update(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -152,7 +152,7 @@ func (h *EventHandler) Update(c *gin.Context) {
 		return
 	}
 
-	event, err := h.service.Update(c.Request.Context(), orgID, eventID, &req)
+	event, err := h.service.Update(c.Request.Context(), entityID, eventID, &req)
 	if err != nil {
 		if err == domain.ErrNotFound {
 			response.Error(c, http.StatusNotFound, "not_found", "event not found")
@@ -172,15 +172,15 @@ func (h *EventHandler) Update(c *gin.Context) {
 // Delete remove um evento
 // DELETE /api/v1/events/:id
 func (h *EventHandler) Delete(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *EventHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(c.Request.Context(), orgID, eventID); err != nil {
+	if err := h.service.Delete(c.Request.Context(), entityID, eventID); err != nil {
 		if err == domain.ErrNotFound {
 			response.Error(c, http.StatusNotFound, "not_found", "event not found")
 			return
@@ -210,15 +210,15 @@ func (h *EventHandler) Delete(c *gin.Context) {
 // List lista eventos
 // GET /api/v1/events
 func (h *EventHandler) List(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -241,14 +241,14 @@ func (h *EventHandler) List(c *gin.Context) {
 
 	if statusStr != "" {
 		status := domain.EventStatus(statusStr)
-		events, total, err = h.service.ListByStatus(c.Request.Context(), orgID, status, page, perPage)
+		events, total, err = h.service.ListByStatus(c.Request.Context(), entityID, status, page, perPage)
 	} else {
-		events, total, err = h.service.List(c.Request.Context(), orgID, page, perPage)
+		events, total, err = h.service.List(c.Request.Context(), entityID, page, perPage)
 	}
 
 	if err != nil {
 		h.logger.Error("Failed to list events",
-			zap.String("organization_id", orgIDStr.(string)),
+			zap.String("entity_id", entityIDStr.(string)),
 			zap.Error(err),
 		)
 		response.Error(c, http.StatusInternalServerError, "internal_error", "failed to list events")
@@ -261,15 +261,15 @@ func (h *EventHandler) List(c *gin.Context) {
 // Activate ativa um evento
 // POST /api/v1/events/:id/activate
 func (h *EventHandler) Activate(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -280,7 +280,7 @@ func (h *EventHandler) Activate(c *gin.Context) {
 		return
 	}
 
-	event, err := h.service.Activate(c.Request.Context(), orgID, eventID)
+	event, err := h.service.Activate(c.Request.Context(), entityID, eventID)
 	if err != nil {
 		if err == domain.ErrNotFound {
 			response.Error(c, http.StatusNotFound, "not_found", "event not found")
@@ -300,15 +300,15 @@ func (h *EventHandler) Activate(c *gin.Context) {
 // Cancel cancela um evento
 // POST /api/v1/events/:id/cancel
 func (h *EventHandler) Cancel(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -319,7 +319,7 @@ func (h *EventHandler) Cancel(c *gin.Context) {
 		return
 	}
 
-	event, err := h.service.Cancel(c.Request.Context(), orgID, eventID)
+	event, err := h.service.Cancel(c.Request.Context(), entityID, eventID)
 	if err != nil {
 		if err == domain.ErrNotFound {
 			response.Error(c, http.StatusNotFound, "not_found", "event not found")
@@ -339,15 +339,15 @@ func (h *EventHandler) Cancel(c *gin.Context) {
 // Complete marca um evento como completo
 // POST /api/v1/events/:id/complete
 func (h *EventHandler) Complete(c *gin.Context) {
-	orgIDStr, exists := c.Get("organization_id")
+	entityIDStr, exists := c.Get("entity_id")
 	if !exists {
-		response.Error(c, http.StatusBadRequest, "bad_request", "organization_id not found in context")
+		response.Error(c, http.StatusBadRequest, "bad_request", "entity_id not found in context")
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr.(string))
+	entityID, err := uuid.Parse(entityIDStr.(string))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "bad_request", "invalid organization_id")
+		response.Error(c, http.StatusBadRequest, "bad_request", "invalid entity_id")
 		return
 	}
 
@@ -358,7 +358,7 @@ func (h *EventHandler) Complete(c *gin.Context) {
 		return
 	}
 
-	event, err := h.service.Complete(c.Request.Context(), orgID, eventID)
+	event, err := h.service.Complete(c.Request.Context(), entityID, eventID)
 	if err != nil {
 		if err == domain.ErrNotFound {
 			response.Error(c, http.StatusNotFound, "not_found", "event not found")
