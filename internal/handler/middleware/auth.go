@@ -12,6 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// RoleHierarchy maps roles to their permission levels
+var RoleHierarchy = map[domain.UserRole]int{
+	domain.UserRoleSuperAdmin:    100,
+	domain.UserRoleEntityOwner:   50,
+	domain.UserRoleEntityAdmin:   40,
+	domain.UserRoleEntityManager: 30,
+	domain.UserRoleEntityViewer:  10,
+}
+
 // AuthMiddleware validates JWT tokens
 func AuthMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -76,44 +85,87 @@ func AuthMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 	}
 }
 
-// RequireOrgAccess checks if the user has access to the organization
-// func RequireOrgAccess(requiredRole domain.UserRole) gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		role, exists := c.Get("role")
-// 		if !exists {
-// 			response.Error(c, 403, "forbidden", "No role found")
-// 			c.Abort()
-// 			return
-// 		}
+// RequireRole checks if the user has at least the required role level
+func RequireRole(requiredRole domain.UserRole) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists {
+			response.Error(c, 403, "forbidden", "No role found")
+			c.Abort()
+			return
+		}
 
-// 		userRole := role.(domain.UserRole)
+		userRole := role.(domain.UserRole)
 
-// 		// Super admin can access everything
-// 		if userRole == domain.UserRoleSuperAdmin {
-// 			c.Next()
-// 			return
-// 		}
+		// Super admin can access everything
+		if userRole == domain.UserRoleSuperAdmin {
+			c.Next()
+			return
+		}
 
-// 		// Check role hierarchy
-// 		if !hasPermission(userRole, requiredRole) {
-// 			response.Error(c, 403, "forbidden", "Insufficient permissions")
-// 			c.Abort()
-// 			return
-// 		}
+		// Check role hierarchy
+		if !HasPermission(userRole, requiredRole) {
+			response.Error(c, 403, "forbidden", "Insufficient permissions")
+			c.Abort()
+			return
+		}
 
-// 		c.Next()
-// 	}
-// }
+		c.Next()
+	}
+}
 
-// func hasPermission(userRole, requiredRole domain.UserRole) bool {
-// 	roleHierarchy := map[domain.UserRole]int{
-// 		domain.UserRoleSuperAdmin:  6,
-// 		domain.UserRoleOrgOwner:    5,
-// 		domain.UserRoleOrgAdmin:    4,
-// 		domain.UserRoleOrgManager:  3,
-// 		domain.UserRoleOrgOperator: 2,
-// 		domain.UserRoleOrgViewer:   1,
-// 	}
+// HasPermission checks if userRole has at least the permission level of requiredRole
+func HasPermission(userRole, requiredRole domain.UserRole) bool {
+	return RoleHierarchy[userRole] >= RoleHierarchy[requiredRole]
+}
 
-// 	return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
-// }
+// RequireEntityAccess validates that the user has access to the entity in the route
+// This should be used on routes that have :entity parameter
+func RequireEntityAccess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get entity_id from JWT context
+		entityID, exists := c.Get("entity_id")
+		if !exists {
+			response.Error(c, 403, "forbidden", "No entity access")
+			c.Abort()
+			return
+		}
+
+		// Get role from context
+		role, roleExists := c.Get("role")
+
+		// Super admin can access any entity
+		if roleExists {
+			userRole := role.(domain.UserRole)
+			if userRole == domain.UserRoleSuperAdmin {
+				c.Next()
+				return
+			}
+		}
+
+		// Check if route has :entity parameter and validate ownership
+		entityParam := c.Param("entity")
+		if entityParam != "" {
+			routeEntityID, err := uuid.Parse(entityParam)
+			if err != nil {
+				response.Error(c, 400, "bad_request", "Invalid entity ID")
+				c.Abort()
+				return
+			}
+
+			userEntityID := entityID.(uuid.UUID)
+			if routeEntityID != userEntityID {
+				response.Error(c, 403, "forbidden", "Access denied to this entity")
+				c.Abort()
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
+// RequireOwnerOrAdmin ensures user is owner or admin to perform sensitive operations
+func RequireOwnerOrAdmin() gin.HandlerFunc {
+	return RequireRole(domain.UserRoleEntityAdmin)
+}

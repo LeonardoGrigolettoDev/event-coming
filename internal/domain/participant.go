@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // ParticipantStatus represents the status of a participant
@@ -30,6 +31,7 @@ type Participant struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty" db:"metadata" gorm:"type:jsonb"`
 	CreatedAt   time.Time              `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time              `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt   gorm.DeletedAt         `json:"-" db:"deleted_at" gorm:"index"` // Soft delete
 
 	// Relacionamento
 	Entity    *Entity `json:"entity,omitempty" gorm:"foreignKey:EntityID"`

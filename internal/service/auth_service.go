@@ -233,11 +233,21 @@ func (s *authServiceImpl) Refresh(ctx context.Context, req dto.RefreshRequest) (
 
 func (s *authServiceImpl) generateAccessToken(user *domain.User) (string, error) {
 	claims := jwt.MapClaims{
-		"sub":   user.ID.String(),
-		"email": user.Email,
-		"name":  user.Name,
-		"exp":   time.Now().Add(s.config.AccessExpiresIn).Unix(),
-		"iat":   time.Now().Unix(),
+		"sub":     user.ID.String(),
+		"user_id": user.ID.String(),
+		"email":   user.Email,
+		"name":    user.Name,
+		"exp":     time.Now().Add(s.config.AccessExpiresIn).Unix(),
+		"iat":     time.Now().Unix(),
+	}
+
+	// Get user's primary entity and role (first entity association)
+	userEntities, err := s.userRepo.GetUserEntities(context.Background(), user.ID)
+	if err == nil && len(userEntities) > 0 {
+		// Use the first entity as the primary one
+		primaryEntity := userEntities[0]
+		claims["entity_id"] = primaryEntity.EntityID.String()
+		claims["role"] = string(primaryEntity.Role)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

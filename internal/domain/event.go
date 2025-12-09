@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // EventType represents the type of event
@@ -27,22 +28,23 @@ const (
 
 // Event represents an event
 type Event struct {
-	ID                   uuid.UUID   `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	EntityID             uuid.UUID   `json:"entity_id" db:"entity_id" gorm:"type:uuid;not null;index"` // Entidade que criou o evento
-	Name                 string      `json:"name" db:"name" gorm:"size:200;not null"`
-	Description          *string     `json:"description,omitempty" db:"description" gorm:"size:1000"`
-	Type                 EventType   `json:"type" db:"type" gorm:"size:50;not null"`
-	Status               EventStatus `json:"status" db:"status" gorm:"size:50;not null;default:'draft'"`
-	LocationLat          float64     `json:"location_lat" db:"location_lat" gorm:"not null"`
-	LocationLng          float64     `json:"location_lng" db:"location_lng" gorm:"not null"`
-	LocationAddress      *string     `json:"location_address,omitempty" db:"location_address" gorm:"size:500"`
-	StartTime            time.Time   `json:"start_time" db:"start_time" gorm:"not null"`
-	EndTime              *time.Time  `json:"end_time,omitempty" db:"end_time"`
-	RRuleString          *string     `json:"rrule_string,omitempty" db:"rrule_string" gorm:"size:500"`
-	ConfirmationDeadline *time.Time  `json:"confirmation_deadline,omitempty" db:"confirmation_deadline"`
-	CreatedBy            uuid.UUID   `json:"created_by" db:"created_by" gorm:"type:uuid;not null"`
-	CreatedAt            time.Time   `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt            time.Time   `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+	ID                   uuid.UUID      `json:"id" db:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	EntityID             uuid.UUID      `json:"entity_id" db:"entity_id" gorm:"type:uuid;not null;index"` // Entidade que criou o evento
+	Name                 string         `json:"name" db:"name" gorm:"size:200;not null"`
+	Description          *string        `json:"description,omitempty" db:"description" gorm:"size:1000"`
+	Type                 EventType      `json:"type" db:"type" gorm:"size:50;not null"`
+	Status               EventStatus    `json:"status" db:"status" gorm:"size:50;not null;default:'draft'"`
+	LocationLat          float64        `json:"location_lat" db:"location_lat" gorm:"not null"`
+	LocationLng          float64        `json:"location_lng" db:"location_lng" gorm:"not null"`
+	LocationAddress      *string        `json:"location_address,omitempty" db:"location_address" gorm:"size:500"`
+	StartTime            time.Time      `json:"start_time" db:"start_time" gorm:"not null"`
+	EndTime              *time.Time     `json:"end_time,omitempty" db:"end_time"`
+	RRuleString          *string        `json:"rrule_string,omitempty" db:"rrule_string" gorm:"size:500"`
+	ConfirmationDeadline *time.Time     `json:"confirmation_deadline,omitempty" db:"confirmation_deadline"`
+	CreatedBy            uuid.UUID      `json:"created_by" db:"created_by" gorm:"type:uuid;not null"`
+	CreatedAt            time.Time      `json:"created_at" db:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt            time.Time      `json:"updated_at" db:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt            gorm.DeletedAt `json:"-" db:"deleted_at" gorm:"index"` // Soft delete
 
 	// Relacionamento
 	Entity *Entity `json:"entity,omitempty" gorm:"foreignKey:EntityID"`

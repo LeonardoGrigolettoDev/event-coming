@@ -34,6 +34,11 @@ func NewEventService(
 
 // Create cria um novo evento com schedulers e participants opcionais
 func (s *EventService) Create(ctx context.Context, entID, userID uuid.UUID, req *dto.CreateEventRequest) (*dto.EventResponse, error) {
+	// Validate event times
+	if err := s.validateEventTimes(req.StartTime, req.EndTime, req.ConfirmationDeadline); err != nil {
+		return nil, err
+	}
+
 	// Criar evento
 	event := &domain.Event{
 		ID:                   uuid.New(),
@@ -343,4 +348,31 @@ func (s *EventService) Cancel(ctx context.Context, entID, eventID uuid.UUID) (*d
 func (s *EventService) Complete(ctx context.Context, entID, eventID uuid.UUID) (*dto.EventResponse, error) {
 	status := domain.EventStatusCompleted
 	return s.Update(ctx, entID, eventID, &dto.UpdateEventRequest{Status: &status})
+}
+
+// validateEventTimes validates event time constraints
+func (s *EventService) validateEventTimes(startTime time.Time, endTime, confirmationDeadline *time.Time) error {
+	now := time.Now()
+
+	// StartTime must be in the future
+	if startTime.Before(now) {
+		return fmt.Errorf("start_time must be in the future")
+	}
+
+	// EndTime must be after StartTime if provided
+	if endTime != nil && !endTime.After(startTime) {
+		return fmt.Errorf("end_time must be after start_time")
+	}
+
+	// ConfirmationDeadline must be before StartTime if provided
+	if confirmationDeadline != nil {
+		if confirmationDeadline.After(startTime) {
+			return fmt.Errorf("confirmation_deadline must be before start_time")
+		}
+		if confirmationDeadline.Before(now) {
+			return fmt.Errorf("confirmation_deadline must be in the future")
+		}
+	}
+
+	return nil
 }

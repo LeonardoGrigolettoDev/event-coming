@@ -111,3 +111,10 @@ type PasswordResetTokenRepository interface {
 	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
 	DeleteExpired(ctx context.Context) error
 }
+
+// StatusHistoryRepository defines status history data access methods
+type StatusHistoryRepository interface {
+	Create(ctx context.Context, history *domain.StatusHistory) error
+	ListByResource(ctx context.Context, resourceType domain.StatusResourceType, resourceID uuid.UUID, page, perPage int) ([]*domain.StatusHistory, int64, error)
+	ListByEntity(ctx context.Context, entityID uuid.UUID, resourceType *domain.StatusResourceType, page, perPage int) ([]*domain.StatusHistory, int64, error)
+}

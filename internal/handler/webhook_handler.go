@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -84,9 +85,9 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 		}
 	}
 
-	// Parse payload
+	// Parse payload using json.Unmarshal (body already consumed by io.ReadAll)
 	var payload whatsapp.WebhookPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		h.logger.Error("Failed to parse webhook payload", zap.Error(err))
 		response.Error(c, http.StatusBadRequest, "bad_request", "Invalid payload")
 		return
