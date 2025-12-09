@@ -391,3 +391,86 @@ func TestLocationBuffer_PopBatch(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, locations)
 }
+
+func TestLocationBuffer_SetLatestLocation_EventEnded(t *testing.T) {
+	s, client := setupTestRedis(t)
+	defer s.Close()
+	defer client.Close()
+
+	buffer := cache.NewLocationBuffer(client)
+	ctx := context.Background()
+
+	location := &domain.Location{
+		ID:            uuid.New(),
+		ParticipantID: uuid.New(),
+		EventID:       uuid.New(),
+		EntityID:      uuid.New(),
+		Latitude:      -23.550520,
+		Longitude:     -46.633308,
+		Timestamp:     time.Now(),
+		CreatedAt:     time.Now(),
+	}
+
+	// Event ended 1 hour ago
+	eventEndTime := time.Now().Add(-1 * time.Hour)
+
+	err := buffer.SetLatestLocation(ctx, location, eventEndTime)
+	assert.NoError(t, err)
+
+	// Should still be cached with minimum TTL
+	cacheKey := "location:latest:" + location.EventID.String() + ":" + location.ParticipantID.String()
+	assert.True(t, s.Exists(cacheKey))
+}
+
+func TestLocationBuffer_SubscribeToEvent(t *testing.T) {
+	s, client := setupTestRedis(t)
+	defer s.Close()
+	defer client.Close()
+
+	buffer := cache.NewLocationBuffer(client)
+	ctx := context.Background()
+
+	eventID := uuid.New()
+
+	// Subscribe to event
+	pubsub := buffer.SubscribeToEvent(ctx, eventID)
+	assert.NotNil(t, pubsub)
+	defer pubsub.Close()
+}
+
+func TestLocationBuffer_GetLatestLocationsForEvent_SomeNotFound(t *testing.T) {
+	s, client := setupTestRedis(t)
+	defer s.Close()
+	defer client.Close()
+
+	buffer := cache.NewLocationBuffer(client)
+	ctx := context.Background()
+
+	eventID := uuid.New()
+	entityID := uuid.New()
+	participant1 := uuid.New()
+	participant2 := uuid.New() // This one won't have a location
+	eventEndTime := time.Now().Add(3 * time.Hour)
+
+	// Store location for only 1 participant
+	loc1 := &domain.Location{
+		ID:            uuid.New(),
+		ParticipantID: participant1,
+		EventID:       eventID,
+		EntityID:      entityID,
+		Latitude:      -23.550520,
+		Longitude:     -46.633308,
+		Timestamp:     time.Now(),
+		CreatedAt:     time.Now(),
+	}
+
+	err := buffer.SetLatestLocation(ctx, loc1, eventEndTime)
+	assert.NoError(t, err)
+
+	// Retrieve locations for both participants
+	participantIDs := []uuid.UUID{participant1, participant2}
+	locations, err := buffer.GetLatestLocationsForEvent(ctx, eventID, participantIDs)
+	assert.NoError(t, err)
+	// Should only return 1 location
+	assert.Len(t, locations, 1)
+}

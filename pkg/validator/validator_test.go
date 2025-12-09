@@ -248,3 +248,72 @@ func TestValidate_Longitude(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatValidationErrors_E164(t *testing.T) {
+	type PhoneStruct struct {
+		Phone string `validate:"required,e164"`
+	}
+
+	input := PhoneStruct{
+		Phone: "invalid-phone-format", // Not in E.164 format
+	}
+
+	err := validator.Validate.Struct(input)
+	assert.Error(t, err)
+
+	errors := validator.FormatValidationErrors(err)
+	assert.Len(t, errors, 1)
+	assert.Contains(t, errors[0].Message, "phone")
+}
+
+func TestFormatValidationErrors_Latitude(t *testing.T) {
+	type LatitudeStruct struct {
+		Lat float64 `validate:"required,latitude"`
+	}
+
+	input := LatitudeStruct{
+		Lat: 91.0, // Invalid latitude
+	}
+
+	err := validator.Validate.Struct(input)
+	assert.Error(t, err)
+
+	errors := validator.FormatValidationErrors(err)
+	assert.Len(t, errors, 1)
+	assert.Contains(t, errors[0].Message, "latitude")
+}
+
+func TestFormatValidationErrors_Longitude(t *testing.T) {
+	type LongitudeStruct struct {
+		Lng float64 `validate:"required,longitude"`
+	}
+
+	input := LongitudeStruct{
+		Lng: 181.0, // Invalid longitude
+	}
+
+	err := validator.Validate.Struct(input)
+	assert.Error(t, err)
+
+	errors := validator.FormatValidationErrors(err)
+	assert.Len(t, errors, 1)
+	assert.Contains(t, errors[0].Message, "longitude")
+}
+
+func TestFormatValidationErrors_DefaultCase(t *testing.T) {
+	type CustomStruct struct {
+		Value string `validate:"uuid"` // uuid is a tag that's not in our switch case
+	}
+
+	input := CustomStruct{
+		Value: "not-a-uuid",
+	}
+
+	err := validator.Validate.Struct(input)
+	assert.Error(t, err)
+
+	errors := validator.FormatValidationErrors(err)
+	assert.Len(t, errors, 1)
+	// Default case should say "validation failed on"
+	assert.Contains(t, errors[0].Message, "validation failed on")
+}
